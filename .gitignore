@@ -1,0 +1,6 @@
+.vscode/
+data/docker/ros1_workspace/build/
+data/docker/ros1_workspace/devel/
+data/docker/ros1_workspace/logs/
+data/docker/ros1_workspace/.vscode/
+data/docker/ros1_workspace/.catkin_tools/

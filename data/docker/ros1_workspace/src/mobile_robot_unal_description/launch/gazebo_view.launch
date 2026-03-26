@@ -1,0 +1,162 @@
+<?xml version="1.0"?>
+<launch>
+
+    <!-- Arg to change robot name and be able to spawn multiple robots-->
+    <arg name="robot_name" default="Robotino"/>
+    <arg name="use_transmissions" default="true"/>
+    <arg name="use_gazebo" default="true"/>
+    <arg name="use_EKF" default="true"/>
+
+    <!-- Load the urdf into the parameter server. -->
+    <arg name="robot_xacro" value="$(find mobile_robot_unal_description)/urdf/mobile_base.urdf.xacro
+                                    robot_name:=$(arg robot_name)
+                                    load_transmission:=$(arg use_transmissions)
+                                    load_gazebo:=$(arg use_gazebo)"/>
+
+    <param name="$(arg robot_name)/robot_description"  command="$(find xacro)/xacro --inorder $(arg robot_xacro)" />
+
+    <!-- ************************************************************************************************ -->
+    <!-- ************************************************************************************************ -->
+    <!-- Create the Robot State Publisher -->
+    <node 
+        pkg="robot_state_publisher" 
+        type="robot_state_publisher" 
+        name="rob_st_pub" 
+        ns="$(arg robot_name)"
+    >
+        <param name="publish_frequency" value="300"/>
+    </node>
+
+    <node 
+        pkg="rviz" 
+        if="$(arg use_EKF)"
+        type="rviz" 
+        name="rviz_Visualization" 
+        args="-d $(find mobile_robot_unal_description)/rviz/config_EKF.rviz"
+    />
+    <node 
+        pkg="rviz" 
+        unless="$(arg use_EKF)"
+        type="rviz" 
+        name="rviz_Visualization" 
+        args="-d $(find mobile_robot_unal_description)/rviz/config.rviz"
+    />
+
+    <!-- ************************************************************************************************ -->
+    <!-- ************************************************************************************************ -->
+    <!-- Spawn Model in Gazebo-->
+    
+    <!-- Launch Gazebo-->
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <!-- <arg name="world_name" value="worlds/empty.world"/>  -->
+        <arg name="world_name" value="$(find mobile_robot_unal_description)/worlds/empty_world.world"/>
+        <arg name="use_sim_time" value="true"/>
+        <arg name="debug" value="false"/>
+        <arg name="paused" value="true"/>
+        <arg name="recording" value="false"/>
+    </include>
+
+    <!-- Robot initial pose -->
+    <arg name="x" default="0.0"/>
+    <arg name="y" default="0.0"/>
+    <arg name="z" default="0.01"/>
+    <arg name="roll" default="0.0"/>
+    <arg name="pitch" default="0.0"/>
+    <arg name="yaw" default="$(eval 0.0 * 3.141592 / 180.0)"/>
+
+    <node 
+        pkg="gazebo_ros" 
+        type="spawn_model" 
+        name="spawn_$(arg robot_name)"  
+        respawn="false"
+        ns="$(arg robot_name)"
+        args="-x $(arg x) -y $(arg y) -z $(arg z)
+            -R $(arg roll) -P $(arg pitch) -Y $(arg yaw)
+            -urdf 
+            -param robot_description
+            -model $(arg robot_name)"
+    />
+
+    <!-- ************************************************************************************************ -->
+    <!-- ************************************************************************************************ -->
+    <!-- Create controller manager-->
+    
+    <rosparam 
+        file="$(find mobile_robot_unal_description)/config/velocity_group_controller.yaml" 
+        command="load" 
+        ns="$(arg robot_name)"
+    />
+    
+    <!--
+    <rosparam 
+        file="$(find mobile_robot_unal_description)/config/effort_controller.yaml" 
+        command="load" 
+        ns="$(arg robot_name)"
+    />
+    -->
+    
+    <node
+        name="Robot_ctrller"
+        pkg="controller_manager"
+        type="spawner"
+        respawn="false"
+        output="screen"
+        ns="$(arg robot_name)"
+        args=  "joint_state_controller 
+                wheel0_controller
+                wheel1_controller
+                wheel2_controller"
+    />
+
+    <!-- ************************************************************************************************ -->
+    <!-- ************************************************************************************************ -->
+    <!-- Launch Odometry node -->
+    <node pkg="mobile_robot_unal_description" type="odometry_node" name="odom" ns="$(arg robot_name)" output="log">
+        <param name="input_frame" value="odom"/>
+        <param name="output_frame" value="base_footprint"/>
+        <param name="robot_name" value="$(arg robot_name)"/>
+        <param name="initial_x" value="0.0"/>
+        <param name="initial_y" value="0.0"/>
+        <param name="initial_theta" value="0.0"/>
+        <param name="loop_rate" value="1000"/>
+        <param unless="$(arg use_EKF)" name="broadcast_transform" value="true"/>
+        <param if="$(arg use_EKF)" name="broadcast_transform" value="false"/>
+    </node>
+
+    <!-- ************************************************************************************************ -->
+    <!-- ************************************************************************************************ -->
+    <!-- Launch Vel command node -->
+    <include file="$(find mobile_robot_vel_publisher)/launch/global_vel_robotino.launch" />
+
+    <!-- ************************************************************************************************ -->
+    <!-- ************************************************************************************************ -->
+    <!-- Launch EKF node -->
+
+    <!--
+    <node if="$(arg use_EKF)" pkg="robot_pose_ekf" type="robot_pose_ekf" name="robot_pose_ekf" ns="$(arg robot_name)">
+        <param name="output_frame" value="odom"/>
+        <param name="base_footprint_frame" value="$(arg robot_name)/base_footprint"/>
+        
+        <param name="freq" value="1000"/>
+        <param name="sensor_timeout" value="1.0"/>
+
+        <param name="odom_used" value="true"/>
+        <param name="imu_used" value="true"/>
+        <param name="vo_used" value="false"/>
+        
+        <param name="debug" value="false"/>
+        <param name="self_diagnose" value="false"/>
+    </node>
+    -->
+
+    <node pkg="robot_localization" type="ekf_localization_node" name="ekf_se" clear_params="true" ns="$(arg robot_name)">
+        <rosparam command="load" file="$(find mobile_robot_unal_description)/config/ekf_params.yaml" />
+    
+        <rosparam param="initial_state">   [0.0,  0.0,  0.0,
+                                            0.0,  0.0,  0.0,
+                                            0.0,  0.0,  0.0,
+                                            0.0,  0.0,  0.0,
+                                            0.0,  0.0,  0.0]</rosparam>
+    </node>
+
+</launch>

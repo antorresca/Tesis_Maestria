@@ -1,0 +1,20 @@
+<launch>
+
+    <arg name="robot_name" default="mobile_manipulator"/>
+
+    <node pkg="mobile_robot_unal_description" type="gazebo_to_ekf" name="gazebo_to_ekf" output="screen" />
+    <!-- SIMULATION -->
+    <include file="$(find mobile_manipulator_unal_description)/launch/gazebo_view.launch">
+        <arg name="robot_name" value="$(arg robot_name)"/>
+    </include>
+
+    <!-- WAIT FOR GAZEBO CLOCK -->
+    <node pkg="rostopic" type="rostopic" name="wait_for_clock"
+          args="echo /clock -n1" />
+
+    <!-- CONTROLLER -->
+    <include file="$(find mob_manipulator_controller)/launch/osc_controller.launch">
+        <arg name="robot_name" value="$(arg robot_name)"/>
+    </include>
+
+</launch>

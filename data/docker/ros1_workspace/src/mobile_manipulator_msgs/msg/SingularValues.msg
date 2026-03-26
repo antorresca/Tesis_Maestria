@@ -1,0 +1,2 @@
+float32 min_pos_sv
+float32 min_ori_sv

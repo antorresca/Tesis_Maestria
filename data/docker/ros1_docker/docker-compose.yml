@@ -1,0 +1,33 @@
+version: "3"
+
+services:
+
+  ros_melodic:
+
+    build: .
+
+    container_name: ros_melodic
+
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+
+    # Volúmenes
+    volumes:
+      # X11 para GUI
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      # Workspace ROS1 desde host
+      - ~Desktop/ros2_tg/docker/ros1_workspace:/catkin_ws
+
+    network_mode: host
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    stdin_open: true
+    tty: true
