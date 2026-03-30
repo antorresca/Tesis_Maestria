@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y \
     ros-melodic-rqt \
     ros-melodic-rqt-common-plugins \
     ros-melodic-robot-localization \
+    ros-melodic-rosbridge-suite \
     libeigen3-dev \
     && rm -rf /var/lib/apt/lists/*
 

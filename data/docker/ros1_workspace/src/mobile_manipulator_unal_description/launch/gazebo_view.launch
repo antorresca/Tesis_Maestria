@@ -8,6 +8,9 @@
     <arg name="mobile_manipulator" default="true" />
     <arg name="world_frame" default="false" />
     <arg name="use_gripper" default="true"/>
+    <!-- gui:=true  → Gazebo + RViz  (debug)
+         gui:=false → Gazebo headless, sin RViz (entrenamiento DRL) -->
+    <arg name="gui" default="true"/>
 
     <!-- Load the urdf into the parameter server. -->
     <arg name="robot_xacro" value="$(find mobile_robot_unal_description)/urdf/mobile_base.urdf.xacro
@@ -44,10 +47,10 @@
     </node>
     
 
-    <node 
-        pkg="rviz" 
-        type="rviz" 
-        name="rviz_Visualization" 
+    <node if="$(arg gui)"
+        pkg="rviz"
+        type="rviz"
+        name="rviz_Visualization"
         args="-d $(find mobile_manipulator_unal_description)/rviz/config.rviz"
     />
 
@@ -63,6 +66,8 @@
         <arg name="debug" value="false"/>
         <arg name="paused" value="true"/>
         <arg name="recording" value="false"/>
+        <arg name="gui" value="$(arg gui)"/>
+        <arg name="headless" value="$(eval not arg('gui'))"/>
     </include>
 
     <!-- Robot initial pose -->

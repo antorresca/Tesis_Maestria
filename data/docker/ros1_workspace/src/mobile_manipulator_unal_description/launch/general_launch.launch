@@ -1,11 +1,14 @@
 <launch>
 
     <arg name="robot_name" default="mobile_manipulator"/>
+    <!-- Pasar gui:=false para entrenamiento headless (sin Gazebo GUI ni RViz) -->
+    <arg name="gui" default="true"/>
 
     <node pkg="mobile_robot_unal_description" type="gazebo_to_ekf" name="gazebo_to_ekf" output="screen" />
     <!-- SIMULATION -->
     <include file="$(find mobile_manipulator_unal_description)/launch/gazebo_view.launch">
         <arg name="robot_name" value="$(arg robot_name)"/>
+        <arg name="gui" value="$(arg gui)"/>
     </include>
 
     <!-- WAIT FOR GAZEBO CLOCK -->
@@ -15,6 +18,11 @@
     <!-- CONTROLLER -->
     <include file="$(find mob_manipulator_controller)/launch/osc_controller.launch">
         <arg name="robot_name" value="$(arg robot_name)"/>
+    </include>
+
+    <!-- ROSBRIDGE — WebSocket bridge para módulos IA externos (puerto 9090) -->
+    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch">
+        <arg name="port" value="9090"/>
     </include>
 
 </launch>

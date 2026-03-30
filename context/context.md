@@ -1,107 +1,103 @@
 # Contexto del Proyecto — Tesis de Profundización
 
-> Leer este archivo al inicio de cada sesión para recuperar el contexto completo sin releer todo el código.
+> Leer al inicio de cada sesión. Ver `data/data.md` para jerarquía de archivos Docker/ROS.
+
+## Proyecto
+
+Robot manipulador móvil (base **Robotino3** + brazo **INTERBOTIX VXSA-300**) simulado en **Gazebo/ROS Melodic** dentro de **Docker**. Controlado por **WBC/OSC** a ~921 Hz en simulación. La tesis agrega módulos de IA encima del robot existente. Hardware host: GPU GTX 1650 4 GB.
+
+**Descartados:** ROS2 Humble (WBC baja a 100-200 Hz), CoppeliaSim (latencia).
 
 ---
 
-## ¿Qué es este proyecto?
-
-Sistema multi-agente para control de un **robot manipulador móvil** (base Robotino3 + brazo INTERBOTIX VXSA-300) simulado en **Gazebo/ROS Melodic** dentro de un contenedor **Docker**. El robot ya existe y está controlado por un **WBC (Whole-Body Controller)** basado en OSC (Operational Space Control) a **1000 Hz**. El trabajo de tesis consiste en añadir capas de IA encima del robot existente.
-
----
-
-## Tecnologías descartadas
-
-- **ROS2 Humble:** Migración intentada pero descartada. El WBC bajó de 1000 Hz a 100-200 Hz — inaceptable para el control.
-- **CoppeliaSim:** Descartado por latencia que dañaba el rendimiento del controlador.
-
----
-
-## Arquitectura (4 módulos)
+## Arquitectura
 
 ```
-Usuario → [PLN] → [Task Planning] → [DRL] → [Robot/WBC en Docker]
-                        ↑
-               [Visión de Máquina]
+Usuario → [PLN] → [Task Planning] → [DRL] → [robot_interface.py] → WBC (Docker)
 ```
 
 | Módulo | Tecnología | Estado |
 |---|---|---|
-| PLN | BERT o similar (balance costo/precisión) | Por desarrollar |
-| Task Planning | Planificador jerárquico simple (HRL = plus, no requerido) | Por desarrollar |
+| PLN | mBERT vs XLM-RoBERTa (fine-tuning, ES+EN) | **En desarrollo (Fase 2)** |
+| Task Planning | Planificador jerárquico simple | Por desarrollar |
 | DRL | PPO vs SAC (comparar métricas) | Por desarrollar |
-| Robot + WBC | ROS Melodic + Gazebo + Docker | **Existe y funciona** |
+| Robot + WBC | ROS Melodic + Gazebo + Docker | Existe y funciona |
+| Visión | **Fuera de alcance** — posiciones conocidas + lidar simulado | No se desarrolla |
 
-**Principio clave:** Arquitectura modular — cada módulo es reemplazable sin afectar los demás. E.g., migrar Task Planning simple a HRL no debe romper PLN ni DRL.
+**Principio:** Arquitectura modular — cada módulo es reemplazable sin afectar los demás.
 
 ---
 
-## Robot existente (Módulo Robot)
+## Robot (caja negra — no modificar WBC)
 
-- **Base:** Robotino3 (ruedas omnidireccionales) — joints: `mobjoint1`, `mobjoint2`, `mobjoint3`
-- **Brazo:** INTERBOTIX VXSA-300 — joints: `joint1` a `joint6`
-- **Controlador:** WBC/OSC en C++ (`mob_manipulator_controller`) — **1000 Hz**
-- **Spawn:** posición (0, 0, 0) mirando +X en Gazebo
+- Joints base: `mobjoint1/2/3` | Joints brazo: `joint1`–`joint6`
+- Spawn: (0,0,0) mirando +X
 
-### Modos del WBC (`Stack_Tasks.cpp`)
+**Modos WBC** (hardcodeados en `Stack_Tasks.cpp` — pendiente parametrizar en runtime):
 
-| Modo | DOF usados | Descripción |
+| Modo | DOF | Descripción |
 |---|---|---|
-| `mobile_manipulator` | 9 (base + brazo) | Coordinación completa para alcanzar pose |
-| `only_manipulator` | 6 (solo brazo) | Solo el brazo alcanza posición/orientación |
-| `mobile_robot` | 3 (solo base) | Solo la base navega a posición |
+| `mobile_manipulator` | 9 | Base + brazo coordinados |
+| `only_manipulator` | 6 | Solo brazo |
+| `mobile_robot` | 3 | Solo base |
 
-- Velocidad: **constante** (`ConstVel`) o **dinámica** (full dynamics)
-- Selección actual: hardcodeada en comentarios de `Stack_Tasks.cpp` → **pendiente parametrizar en runtime**
-
-### Topics ROS
+**Topics ROS:**
 
 | Topic | Tipo | Dirección |
 |---|---|---|
-| `/mobile_manipulator/desired_traj` | `mobile_manipulator_msgs/Trajectory` | Entrada al WBC (comando) |
-| `/mobile_manipulator/data` | `mobile_manipulator_msgs/MobileManipulator` | Salida del WBC (estado completo) |
-| `/mobile_manipulator/joint_states` | `sensor_msgs/JointState` | Estado de articulaciones |
-| `/mobile_manipulator/commands/velocity` | `geometry_msgs/Twist` | Velocidad de la base |
+| `/mobile_manipulator/desired_traj` | `Trajectory` | → WBC (comando) |
+| `/mobile_manipulator/data` | `MobileManipulator` | ← WBC (estado) |
+| `/mobile_manipulator/joint_states` | `JointState` | ← WBC |
+| `/mobile_manipulator/commands/velocity` | `Twist` | → base |
 
-### Problema identificado: Arm Overextension
-
-- Enviar objetivo en +X (dirección de spawn) causa extensión completa del brazo **sin mover la base**
-- Causa: `AchieveJointConf()` solo corre en `cycle==1` (posible bug), no hay penalización por extensión
-- **Pendiente resolver en Fase 1**
+**Arm overextension:** Goals dentro de ~1.1 m desde la base → brazo absorbe todo el esfuerzo (pseudoinverso dinámico, menor inercia). **Decisión:** no modificar WBC; se resuelve en Fase 4 con goals siempre fuera del workspace del brazo.
 
 ---
 
-## Comunicación entre módulos
+## Comunicación
 
-- **Protocolo:** WebSocket — `roslibpy` + `rosbridge_server` (puerto `9090`)
-- **Estado:** Comunicación validada con `data/prueba_web.py` ✓
-- **Importante:** `rosbridge_server` **NO está en los launch files actuales** — hay que agregarlo
-- Los módulos IA corren **fuera del Docker**; el robot corre **dentro**
-- Docker usa `network_mode: host` → todos los puertos del container disponibles en localhost
+- WebSocket: `roslibpy` + `rosbridge_server` puerto `9090` (integrado en `general_launch.launch`)
+- Módulos IA corren **fuera del Docker**; Docker usa `network_mode: host`
+- Solo el DRL interactúa con el robot vía WebSocket; PLN y Task Planning se comunican entre sí
 
----
-
-## Interfaces entre módulos (definidas en plan)
-
+**Interfaces:**
 ```
-PLN → Task Planning:   JSON { intent, target, destination, confidence }
-Task Planning → DRL:   JSON { task_id, mode, objective{pose}, constraints, subtask_index }
-DRL → Robot:           /mobile_manipulator/desired_traj (Trajectory msg)
-Robot → DRL:           /mobile_manipulator/data (MobileManipulator msg)
+PLN → Task Planning:   { intent, target, destination, confidence }
+Task Planning → DRL:   { task_id, mode, objective{pose}, constraints, subtask_index }
+DRL → Robot:           /mobile_manipulator/desired_traj
+Robot → DRL:           /mobile_manipulator/data
 ```
 
 ---
 
-## Paquetes ROS relevantes
+## Módulos IA — estructura actual (`modules/`)
 
-| Paquete | Contenido |
-|---|---|
-| `mobile_manipulator_msgs` | Mensajes custom: `Trajectory`, `MobileManipulator`, `Torques`, etc. |
-| `mob_manipulator_controller` | WBC/OSC — controlador principal (C++) |
-| `mobile_manipulator_unal_description` | URDF completo + launch files del sistema |
-| `mobile_robot_unal_description` | URDF + odometría + EKF de la base Robotino3 |
-| `manipulator_unal_description` | URDF + meshes del brazo VXSA-300 |
-| `test_trajectories_osc` | Scripts Python de prueba de trayectorias con el WBC |
+```
+modules/
+  requirements.txt                      ← deps base (roslibpy, numpy)
+  robot_interface/
+    robot_interface.py                  ← puente roslibpy↔DRL (connect, send_goal, get_state, reset)
+  pln/
+    requirements_pln.txt                ← transformers, torch, sklearn, pandas
+    data/raw/
+      seed_dataset.csv                  ← 84 frases semilla (6 intenciones, ES+EN)
+      llm_augmentation_prompt.md        ← prompt para aumentar dataset con LLMs
+    data/processed/                     ← train/val/test splits (generados por prepare_dataset.py)
+    models/                             ← modelos fine-tuneados (gitignored)
+    src/
+      prepare_dataset.py                ← mezcla, dedup, splits 70/15/15
+      dataset.py                        ← PyTorch Dataset
+      train.py                          ← fine-tuning --model [mbert|xlmr]
+      evaluate.py                       ← métricas comparativas + confusion matrix
+      entity_extractor.py               ← extractor de entidades por reglas/regex
+      pln_module.py                     ← interfaz final: predict(text) → JSON
+```
+
+**PLN — pipeline dos etapas (Opción B):**
+1. Clasificación de intención: mBERT o XLM-RoBERTa fine-tuneado (6 clases)
+2. Extracción de entidades (target, destination): reglas/regex sobre vocabulario del dominio
+
+**Intenciones:** `navigate`, `pick`, `place`, `fetch`, `transport`, `go_home`
 
 ---
 
@@ -109,48 +105,43 @@ Robot → DRL:           /mobile_manipulator/data (MobileManipulator msg)
 
 | Archivo | Relevancia |
 |---|---|
-| [CLAUDE.md](../CLAUDE.md) | Guía maestra del proyecto para Claude |
-| [data/data.md](../data/data.md) | Jerarquía comentada de la carpeta data/ |
-| [data/prueba_web.py](../data/prueba_web.py) | Referencia de comunicación roslibpy↔rosbridge |
-| `data/docker/ros1_docker/Dockerfile` | Imagen del robot (ROS Melodic + DART + Gazebo) |
-| `data/docker/ros1_docker/docker-compose.yml` | Configuración Docker (network: host, GPU) |
-| `src/mob_manipulator_controller/src/Stack_Tasks.cpp` | Modos WBC, arm overextension, jerarquía de tareas |
-| `src/mob_manipulator_controller/src/Mob_Manipulator_Controller.cpp` | Loop de control principal (1000 Hz) |
-| `src/mobile_manipulator_unal_description/launch/general_launch.launch` | Launch principal — **agregar rosbridge aquí** |
-| `src/mob_manipulator_controller/config/config.yaml` | Ganancias OSC y parámetros configurables |
+| `CLAUDE.md` | Guía maestra del proyecto |
+| `data/data.md` | Jerarquía de la carpeta data/ |
+| `data/docker/ros1_docker/Dockerfile` | Imagen Docker |
+| `data/docker/ros1_docker/docker-compose.yml` | Config Docker (network: host, GPU) |
+| `data/docker/.../general_launch.launch` | Launch principal (rosbridge + arg `gui`) |
+| `data/docker/.../Stack_Tasks.cpp` | Modos WBC — **no modificar** |
+| `data/docker/.../config.yaml` | Ganancias OSC — **no modificar** |
 
----
-
-## Plan de desarrollo (fases)
-
-```
-Fase 0: Infraestructura (rosbridge, documentar arm overextension, parametrizar modos)
-    └── Fase 1: Robot interface limpia (robot_interface.py, resolver overextension)
-            ├── Fase 2: PLN (BERT → JSON)              ─┐
-            ├── Fase 3: Task Planning (JSON → subtareas) ├─ paralelas
-            └── Fase 4: DRL (PPO vs SAC, env Gym)       ─┘
-                    └── Fase 5: Integración end-to-end
+**Ejecución:**
+```bash
+roslaunch ... general_launch.launch          # GUI completa (~500 Hz)
+roslaunch ... general_launch.launch gui:=false  # headless (~921 Hz, obligatorio para DRL)
 ```
 
 ---
 
-## Estado actual (actualizar al avanzar)
+## Estado y fases
 
-- [x] Robot base existente y funcionando en Docker (1000 Hz)
-- [x] Comunicación WebSocket probada (roslibpy → rosbridge)
-- [x] Plan de desarrollo definido y aprobado
-- [ ] Fase 0: Infraestructura — rosbridge en launch files, documentar arm overextension
-- [ ] Fase 1: robot_interface.py + resolver arm overextension
-- [ ] Fase 2: Módulo PLN
-- [ ] Fase 3: Módulo Task Planning
-- [ ] Fase 4: Módulo DRL (PPO vs SAC)
+- [x] Fase 0: rosbridge, headless, arm overextension analizada
+- [x] Fase 1: `robot_interface.py` lista
+- [ ] **Fase 2: PLN** — dataset semilla listo, pendiente aumentación LLM + entrenamiento
+- [ ] Fase 3: Task Planning
+- [ ] Fase 4: DRL (PPO vs SAC, env Gym)
 - [ ] Fase 5: Integración end-to-end
+
+**Próximos pasos Fase 2:**
+1. Generar `augmented_dataset.csv` con LLMs (ver `pln/data/llm_augmentation_prompt.md`)
+2. `python pln/src/prepare_dataset.py`
+3. `python pln/src/train.py --model mbert` y `--model xlmr`
+4. `python pln/src/evaluate.py`
+5. Expandir vocabulario en `entity_extractor.py` con objetos/zonas reales de Gazebo
 
 ---
 
 ## Decisiones abiertas
 
-- ¿Módulo de Visión de Máquina se desarrolla en esta tesis o se usa mock?
-- ¿Alcance del DRL? ¿Solo base, solo brazo, o coordinado?
+- ¿DRL controla solo base (XY) o coordina con brazo?
 - ¿Task Planning genera comandos en espacio Cartesiano o de configuración?
-- ¿La comparación PPO vs SAC necesita publicación o es solo para la tesis?
+- ¿Comparación PPO vs SAC requiere publicación o solo es para la tesis?
+- ¿Observación DRL incluye lidar simulado o solo pose del robot?

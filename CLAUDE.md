@@ -6,7 +6,6 @@ Archovs relevantes para EVITAR RELEER TODO EL PROYECTO PARA NO PERDER TOKENS
 
 * data/data.md -> Información sobre los archivos del proyecto (será actualizado cada vez que sea necesario) 
 * context/context.md -> Información técnica del proyecto y contexto para general
-* plan/plan.md -> Plan de accion para desarrollo del proyecto
 
 ## Descripción del Proyecto
 
@@ -108,3 +107,6 @@ H -- Pose --> F
 - Se busca usar websockets con Python y tuneles para la comunicación con el robot.
 - El robot corre en simulación (Gazebo) dentro de Docker; no hay hardware real involucrado por ahora.
 - Preferir soluciones que funcionen dentro del contenedor Docker sin dependencias externas no declaradas.
+- **Bitácora:** Cada 5-7 interacciones o cambios significativos, agregar una entrada resumida en `Bitacora/` con la fecha como nombre de archivo (e.g. `Bitacora/29-03-2026.md`). Usar el formato del archivo existente. El objetivo es tener trazabilidad de los avances del proyecto.
+- **Validación en simulación:** Cuando un cambio requiera ser validado corriendo el robot en Gazebo (e.g. modificaciones al WBC, launch files, parámetros del controlador), avisar explícitamente al usuario antes de continuar.
+- **WBC es de otra tesis:** No proponer ni realizar cambios en `Stack_Tasks.cpp`, `Mob_Manipulator_Controller.cpp` ni en la lógica OSC salvo que sea estrictamente necesario y el usuario lo confirme. Tratar el WBC como caja negra.

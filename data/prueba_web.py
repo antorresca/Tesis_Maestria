@@ -37,7 +37,7 @@ except KeyboardInterrupt:
 """ COMANDO DE ESCRITURA DESDE DOCKER
 rostopic pub  /mobile_manipulator/desired_traj mobile_manipulator_msgs/Trajectory "pose:
   translation:
-    x: -1.0
+    x: 1.0
     y: 0.0
     z: 0.5
 joints: {mobjoint1: -10.0, mobjoint2: -10.0, mobjoint3: -10.0, joint1: -10.0, joint2: -10.0,

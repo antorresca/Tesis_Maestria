@@ -1,0 +1,12 @@
+# Dependencias del módulo PLN
+# Instalar con: pip install -r requirements_pln.txt
+
+# Modelos y fine-tuning
+transformers>=4.40.0
+torch>=2.0.0
+datasets>=2.14.0
+
+# Datos y métricas
+pandas>=2.0.0
+scikit-learn>=1.3.0
+numpy>=1.24.0

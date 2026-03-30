@@ -51,7 +51,7 @@ void MobManipulatorController::StackTasks(Eigen::MatrixXd *Null_space, Eigen::Ve
 
     /*****************************************************/
     // Controller using pos XYZ with mobile manipulator
-    
+
     //osc_controller_.AchieveCartesianManipulator(targetCartPos, targetCartVel, targetCartAccel, &min_sv_pos, cycle, M, C_k, g_k, dart_robotSkeleton, mEndEffector_, &tau_result, torque_ns, Null_space);
     osc_controller_.AchieveCartesianConstVel(targetCartPos, &min_sv_pos, cycle, M, C_k, g_k, dart_robotSkeleton, mEndEffector_, &tau_result, torque_ns, Null_space);
 

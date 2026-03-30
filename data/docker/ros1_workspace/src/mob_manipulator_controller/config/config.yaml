@@ -61,7 +61,7 @@ Cartesian_orientation_gains:
     Z: 0.9
 
 Joint_tasks_gains:
-  Proportional: 
+  Proportional:
     Mobile_base: 0.0
     Manipulator: 0.0
   Derivative:

@@ -1,0 +1,85 @@
+text,intent,lang,source
+"ve a la cocina",navigate,es,manual_seed
+"navega hasta la mesa",navigate,es,manual_seed
+"dirígete al punto de carga",navigate,es,manual_seed
+"muévete hacia la zona verde",navigate,es,manual_seed
+"desplázate al área de trabajo",navigate,es,manual_seed
+"ve al punto de inicio",navigate,es,manual_seed
+"camina hasta la bandeja",navigate,es,manual_seed
+"go to the kitchen",navigate,en,manual_seed
+"navigate to the table",navigate,en,manual_seed
+"move to the charging point",navigate,en,manual_seed
+"drive to the green zone",navigate,en,manual_seed
+"head to the workspace",navigate,en,manual_seed
+"go to the starting point",navigate,en,manual_seed
+"move towards the tray",navigate,en,manual_seed
+"recoge el cubo azul",pick,es,manual_seed
+"agarra el objeto rojo",pick,es,manual_seed
+"toma la caja pequeña",pick,es,manual_seed
+"levanta la botella verde",pick,es,manual_seed
+"coge el cilindro de la mesa",pick,es,manual_seed
+"agarra esa esfera",pick,es,manual_seed
+"toma el bloque amarillo",pick,es,manual_seed
+"pick up the blue cube",pick,en,manual_seed
+"grab the red object",pick,en,manual_seed
+"take the small box",pick,en,manual_seed
+"lift the green bottle",pick,en,manual_seed
+"grasp the cylinder on the table",pick,en,manual_seed
+"grab that sphere",pick,en,manual_seed
+"take the yellow block",pick,en,manual_seed
+"deja el cubo en la mesa",place,es,manual_seed
+"coloca el objeto en la bandeja",place,es,manual_seed
+"pon la botella sobre la caja",place,es,manual_seed
+"suelta el bloque en el área verde",place,es,manual_seed
+"deposita el cilindro en la zona de descarga",place,es,manual_seed
+"deja lo que tienes en la mesa",place,es,manual_seed
+"coloca el objeto aquí",place,es,manual_seed
+"place the cube on the table",place,en,manual_seed
+"put the object on the tray",place,en,manual_seed
+"set the bottle on top of the box",place,en,manual_seed
+"drop the block in the green area",place,en,manual_seed
+"deposit the cylinder in the drop zone",place,en,manual_seed
+"leave what you have on the table",place,en,manual_seed
+"place the object here",place,en,manual_seed
+"trae el cubo rojo",fetch,es,manual_seed
+"busca y trae el objeto azul",fetch,es,manual_seed
+"ve por la caja y tráela",fetch,es,manual_seed
+"trae el cilindro de la mesa",fetch,es,manual_seed
+"busca la botella verde y tráemela",fetch,es,manual_seed
+"quiero el cubo amarillo",fetch,es,manual_seed
+"tráeme la esfera pequeña",fetch,es,manual_seed
+"fetch the red cube",fetch,en,manual_seed
+"get the blue object and bring it here",fetch,en,manual_seed
+"go get the box and bring it back",fetch,en,manual_seed
+"bring the cylinder from the table",fetch,en,manual_seed
+"find the green bottle and bring it to me",fetch,en,manual_seed
+"I want the yellow cube",fetch,en,manual_seed
+"bring me the small sphere",fetch,en,manual_seed
+"transporta el objeto al área verde",transport,es,manual_seed
+"lleva el cubo desde aquí hasta allá",transport,es,manual_seed
+"mueve la caja a la zona de descarga",transport,es,manual_seed
+"lleva el cilindro a la bandeja",transport,es,manual_seed
+"traslada la botella a la cocina",transport,es,manual_seed
+"mueve el bloque al punto rojo",transport,es,manual_seed
+"lleva ese objeto al otro lado",transport,es,manual_seed
+"transport the object to the green area",transport,en,manual_seed
+"carry the cube from here to there",transport,en,manual_seed
+"move the box to the drop zone",transport,en,manual_seed
+"take the cylinder to the tray",transport,en,manual_seed
+"bring the bottle to the kitchen",transport,en,manual_seed
+"move the block to the red point",transport,en,manual_seed
+"take that object to the other side",transport,en,manual_seed
+"vuelve a casa",go_home,es,manual_seed
+"regresa a la posición inicial",go_home,es,manual_seed
+"ve a home",go_home,es,manual_seed
+"posición de reposo",go_home,es,manual_seed
+"vuelve al origen",go_home,es,manual_seed
+"reinicia tu posición",go_home,es,manual_seed
+"regresa a donde estabas",go_home,es,manual_seed
+"go home",go_home,en,manual_seed
+"return to home position",go_home,en,manual_seed
+"go to initial position",go_home,en,manual_seed
+"rest position",go_home,en,manual_seed
+"return to origin",go_home,en,manual_seed
+"reset your position",go_home,en,manual_seed
+"go back to where you started",go_home,en,manual_seed
