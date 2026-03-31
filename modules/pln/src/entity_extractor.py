@@ -41,10 +41,6 @@ LOCATIONS = [
 DEST_PREPS_ES = r"(?:a|hacia|hasta|en|sobre|encima de|dentro de)"
 DEST_PREPS_EN = r"(?:to|towards|onto|on|in|into|at)"
 
-# Preposiciones de origen (para fetch/transport)
-SRC_PREPS_ES = r"(?:de|desde|en)"
-SRC_PREPS_EN = r"(?:from|at|on)"
-
 
 @dataclass
 class Entities:
@@ -96,37 +92,29 @@ def extract(intent: str, text: str) -> Entities:
     Extrae entidades según la intención detectada por el clasificador.
 
     Intenciones y entidades esperadas:
-        navigate   → destination
-        pick       → target
-        place      → target (lo que se tiene), destination
-        fetch      → target
-        transport  → target, destination
-        go_home    → (ninguna)
+        navigate   → destination (si es "go home/casa/inicio" → destination="home")
+        pick       → target (+ destination si el usuario indica de dónde recoger)
+        place      → target (objeto que se porta), destination (dónde dejarlo)
     """
     text_lower = text.lower()
 
     if intent == "navigate":
+        # Detectar go_home semánticamente
+        home_keywords = r"\b(home|casa|inicio|base|dock|origen)\b"
+        if re.search(home_keywords, text_lower):
+            return Entities(destination="home")
         return Entities(destination=_find_destination(text_lower))
 
     elif intent == "pick":
-        return Entities(target=_find_object(text_lower))
+        return Entities(
+            target=_find_object(text_lower),
+            destination=_find_destination(text_lower),
+        )
 
     elif intent == "place":
         return Entities(
             target=_find_object(text_lower),
             destination=_find_destination(text_lower),
         )
-
-    elif intent == "fetch":
-        return Entities(target=_find_object(text_lower))
-
-    elif intent == "transport":
-        return Entities(
-            target=_find_object(text_lower),
-            destination=_find_destination(text_lower),
-        )
-
-    elif intent == "go_home":
-        return Entities()
 
     return Entities()

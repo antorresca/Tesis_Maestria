@@ -25,15 +25,17 @@ ROOT = Path(__file__).parent.parent
 DATA_DIR = ROOT / "data" / "processed"
 MODELS_DIR = ROOT / "models"
 
-INTENTS = ["navigate", "pick", "place", "fetch", "transport", "go_home"]
-
-
 def load_model(model_key: str):
     model_path = MODELS_DIR / model_key / "best"
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     model = AutoModelForSequenceClassification.from_pretrained(model_path)
     model.eval()
-    return tokenizer, model
+    # Leer intents del label_map del propio modelo (puede diferir entre modelos)
+    with open(model_path / "config.json") as f:
+        import json as _json
+        cfg = _json.load(f)
+    intents = [cfg["id2label"][str(i)] for i in range(len(cfg["id2label"]))]
+    return tokenizer, model, intents
 
 
 def predict_batch(texts, tokenizer, model, max_length=128):
@@ -55,7 +57,7 @@ def predict_batch(texts, tokenizer, model, max_length=128):
 
 def evaluate_model(model_key: str, test_df: pd.DataFrame):
     print(f"\nEvaluando {model_key}...")
-    tokenizer, model = load_model(model_key)
+    tokenizer, model, intents = load_model(model_key)
 
     texts = test_df["text"].tolist()
     labels = test_df["label"].tolist()
@@ -81,6 +83,7 @@ def evaluate_model(model_key: str, test_df: pd.DataFrame):
         "model_size_mb": model_size_mb,
         "preds": preds,
         "labels": labels,
+        "intents": intents,
     }
 
 
@@ -117,12 +120,12 @@ def main():
     # --- Classification report por modelo ---
     for model_key, r in results.items():
         print(f"\n--- Classification Report: {model_key} ---")
-        print(classification_report(r["labels"], r["preds"], target_names=INTENTS))
+        print(classification_report(r["labels"], r["preds"], target_names=r["intents"]))
 
     # --- Confusion matrix ---
     for model_key, r in results.items():
         cm = confusion_matrix(r["labels"], r["preds"])
-        cm_df = pd.DataFrame(cm, index=INTENTS, columns=INTENTS)
+        cm_df = pd.DataFrame(cm, index=r["intents"], columns=r["intents"])
         print(f"\n--- Confusion Matrix: {model_key} ---")
         print(cm_df.to_string())
 

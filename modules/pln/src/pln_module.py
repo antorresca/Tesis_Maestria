@@ -8,7 +8,7 @@ Uso como librería:
     from pln_module import PLNModule
     pln = PLNModule(model_type="xlmr")
     result = pln.predict("lleva el cubo azul a la mesa")
-    # → {"intent": "transport", "target": "cubo azul", "destination": "mesa", "confidence": 0.97}
+    # → {"intent": "place", "target": "cubo azul", "destination": "mesa", "confidence": 0.97}
 
 Uso como script:
     python src/pln_module.py --model xlmr
@@ -39,8 +39,10 @@ class PLNModule:
         if model_path is None:
             model_path = str(MODELS_DIR / model_type / "best")
 
-        with open(DATA_DIR / "label_map.json") as f:
-            self._label_map: dict = json.load(f)  # {"0": "navigate", ...}
+        # Leer label_map del config.json del modelo (siempre sincronizado con el modelo cargado)
+        with open(Path(model_path) / "config.json") as f:
+            cfg = json.load(f)
+        self._label_map: dict = cfg["id2label"]  # {"0": "navigate", ...}
 
         self._tokenizer = AutoTokenizer.from_pretrained(model_path)
         self._model = AutoModelForSequenceClassification.from_pretrained(model_path)

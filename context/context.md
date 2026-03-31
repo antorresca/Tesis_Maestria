@@ -18,7 +18,7 @@ Usuario → [PLN] → [Task Planning] → [DRL] → [robot_interface.py] → WBC
 
 | Módulo | Tecnología | Estado |
 |---|---|---|
-| PLN | mBERT (`bert-base-multilingual-cased`) — fine-tuning ES+EN | **Completo ✓ (90.9% F1)** |
+| PLN | XLM-RoBERTa (`xlm-roberta-base`) — fine-tuning ES+EN | **Completo ✓ (94% F1-test, 3 clases atómicas)** |
 | Task Planning | Planificador jerárquico simple | Por desarrollar |
 | DRL | PPO vs SAC (comparar métricas) | Por desarrollar |
 | Robot + WBC | ROS Melodic + Gazebo + Docker | Existe y funciona |
@@ -94,7 +94,7 @@ modules/
 ```
 
 **PLN — pipeline dos etapas (Opción B):**
-1. Clasificación de intención: **mBERT fine-tuneado** (objetivo: 90.9% F1, 12.2 ms/sample) — seleccionado sobre XLM-RoBERTa (86.4% F1, 1112 MB, requiere CPU para entrenar en GTX 1650)
+1. Clasificación de intención: **XLM-RoBERTa fine-tuneado** (94% F1, 6 ms/sample, 1112 MB) — seleccionado sobre mBERT (88% F1, 19.6 ms/sample, 711 MB). Entrenamiento en CPU (GTX 1650 VRAM insuficiente), inferencia rápida.
 2. Extracción de entidades (target, destination): reglas/regex sobre vocabulario del dominio
 
 **Intenciones (3 clases atómicas):** `navigate`, `pick`, `place`
@@ -103,7 +103,7 @@ modules/
 
 **Config de entrenamiento:** `--unfreeze_layers 0` (full fine-tuning), `max_length=64`, `batch_size=4`, `grad_accum=4`, `weight_decay=0.1`, early stopping `patience=3` sobre `eval_val_f1_weighted`
 
-**⚠️ Pendiente al iniciar próxima sesión:** remaear dataset de 6→3 clases atómicas y re-entrenar mBERT (ver pipeline en bitácora 30-03-2026)
+**⚠️ Pendiente al iniciar próxima sesión:** actualizar `entity_extractor.py` y `pln_module.py` para 3 clases + modelo XLM-R, luego comenzar Fase 3 (Task Planning)
 
 ---
 
@@ -131,7 +131,7 @@ roslaunch ... general_launch.launch gui:=false  # headless (~921 Hz, obligatorio
 
 - [x] Fase 0: rosbridge, headless, arm overextension analizada
 - [x] Fase 1: `robot_interface.py` lista
-- [ ] **Fase 2: PLN** — re-entrenar mBERT con `--unfreeze_layers 0` (modelo actual es experimento frozen-4, 81.8%)
+- [x] **Fase 2: PLN** — XLM-RoBERTa 3 clases atómicas, 94% F1-test, augmentación online ✓
 - [ ] Fase 3: Task Planning
 - [ ] Fase 4: DRL (PPO vs SAC, env Gym)
 - [ ] Fase 5: Integración end-to-end

@@ -15,21 +15,15 @@
   "id2label": {
     "0": "navigate",
     "1": "pick",
-    "2": "place",
-    "3": "fetch",
-    "4": "transport",
-    "5": "go_home"
+    "2": "place"
   },
   "initializer_range": 0.02,
   "intermediate_size": 3072,
   "is_decoder": false,
   "label2id": {
-    "fetch": 3,
-    "go_home": 5,
     "navigate": 0,
     "pick": 1,
-    "place": 2,
-    "transport": 4
+    "place": 2
   },
   "layer_norm_eps": 1e-12,
   "max_position_embeddings": 512,

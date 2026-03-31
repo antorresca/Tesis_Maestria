@@ -1,20 +1,30 @@
 {
   "mbert": {
     "model": "mbert",
-    "accuracy": 0.8636363636363636,
-    "f1_weighted": 0.8636949752510393,
-    "f1_macro": 0.8634671329179339,
-    "inference_time_s": 0.7641012879998925,
-    "ms_per_sample": 11.577292242422615,
-    "model_size_mb": 711.432216
+    "accuracy": 0.8787878787878788,
+    "f1_weighted": 0.8804245399990082,
+    "f1_macro": 0.8812353234184872,
+    "inference_time_s": 1.2908672339999612,
+    "ms_per_sample": 19.558594454544867,
+    "model_size_mb": 711.422988,
+    "intents": [
+      "navigate",
+      "pick",
+      "place"
+    ]
   },
   "xlmr": {
     "model": "xlmr",
-    "accuracy": 0.8636363636363636,
-    "f1_weighted": 0.8681066408339134,
-    "f1_macro": 0.8722388722388722,
-    "inference_time_s": 0.39153706299975966,
-    "ms_per_sample": 5.932379742420601,
-    "model_size_mb": 1112.193048
+    "accuracy": 0.9393939393939394,
+    "f1_weighted": 0.9396927238131183,
+    "f1_macro": 0.9402902926514759,
+    "inference_time_s": 0.3991912660003436,
+    "ms_per_sample": 6.048352515156721,
+    "model_size_mb": 1112.18382,
+    "intents": [
+      "navigate",
+      "pick",
+      "place"
+    ]
   }
 }

@@ -36,6 +36,7 @@ def load_data() -> pd.DataFrame:
 
 def clean(df: pd.DataFrame) -> pd.DataFrame:
     df["text"] = df["text"].str.strip().str.lower()
+    df["intent"] = df["intent"].replace(INTENT_REMAP)
     df = df.drop_duplicates(subset=["text"])
     df = df[df["intent"].isin(INTENTS)]
     df = df.dropna(subset=["text", "intent"])
