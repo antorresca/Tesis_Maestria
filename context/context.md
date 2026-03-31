@@ -18,7 +18,7 @@ Usuario → [PLN] → [Task Planning] → [DRL] → [robot_interface.py] → WBC
 
 | Módulo | Tecnología | Estado |
 |---|---|---|
-| PLN | mBERT vs XLM-RoBERTa (fine-tuning, ES+EN) | **En desarrollo (Fase 2)** |
+| PLN | mBERT (`bert-base-multilingual-cased`) — fine-tuning ES+EN | **Completo ✓ (90.9% F1)** |
 | Task Planning | Planificador jerárquico simple | Por desarrollar |
 | DRL | PPO vs SAC (comparar métricas) | Por desarrollar |
 | Robot + WBC | ROS Melodic + Gazebo + Docker | Existe y funciona |
@@ -94,10 +94,16 @@ modules/
 ```
 
 **PLN — pipeline dos etapas (Opción B):**
-1. Clasificación de intención: mBERT o XLM-RoBERTa fine-tuneado (6 clases)
+1. Clasificación de intención: **mBERT fine-tuneado** (objetivo: 90.9% F1, 12.2 ms/sample) — seleccionado sobre XLM-RoBERTa (86.4% F1, 1112 MB, requiere CPU para entrenar en GTX 1650)
 2. Extracción de entidades (target, destination): reglas/regex sobre vocabulario del dominio
 
-**Intenciones:** `navigate`, `pick`, `place`, `fetch`, `transport`, `go_home`
+**Intenciones (3 clases atómicas):** `navigate`, `pick`, `place`
+
+> go_home → navigate (destination="home"), fetch → pick, transport → place. Task Planning descompone en subtareas operacionales (move_to, grasp, release). Ver bitácora 30-03-2026 para razonamiento completo.
+
+**Config de entrenamiento:** `--unfreeze_layers 0` (full fine-tuning), `max_length=64`, `batch_size=4`, `grad_accum=4`, `weight_decay=0.1`, early stopping `patience=3` sobre `eval_val_f1_weighted`
+
+**⚠️ Pendiente al iniciar próxima sesión:** remaear dataset de 6→3 clases atómicas y re-entrenar mBERT (ver pipeline en bitácora 30-03-2026)
 
 ---
 
@@ -125,17 +131,17 @@ roslaunch ... general_launch.launch gui:=false  # headless (~921 Hz, obligatorio
 
 - [x] Fase 0: rosbridge, headless, arm overextension analizada
 - [x] Fase 1: `robot_interface.py` lista
-- [ ] **Fase 2: PLN** — dataset semilla listo, pendiente aumentación LLM + entrenamiento
+- [ ] **Fase 2: PLN** — re-entrenar mBERT con `--unfreeze_layers 0` (modelo actual es experimento frozen-4, 81.8%)
 - [ ] Fase 3: Task Planning
 - [ ] Fase 4: DRL (PPO vs SAC, env Gym)
 - [ ] Fase 5: Integración end-to-end
 
 **Próximos pasos Fase 2:**
-1. Generar `augmented_dataset.csv` con LLMs (ver `pln/data/llm_augmentation_prompt.md`)
+1. Remaear etiquetas en `augmented_dataset.csv` (6 clases → 3 atómicas)
 2. `python pln/src/prepare_dataset.py`
-3. `python pln/src/train.py --model mbert` y `--model xlmr`
+3. `python pln/src/train.py --model mbert --unfreeze_layers 0 --augment`
 4. `python pln/src/evaluate.py`
-5. Expandir vocabulario en `entity_extractor.py` con objetos/zonas reales de Gazebo
+5. Actualizar `entity_extractor.py` y `pln_module.py` para las 3 clases
 
 ---
 

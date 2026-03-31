@@ -1,0 +1,388 @@
+text,intent,lang,source
+ve al pasillo,navigate,es,chatgpt
+muévete hacia la puerta,navigate,es,chatgpt
+puedes ir a la cocina,navigate,es,chatgpt
+dirígete al punto de carga,navigate,es,chatgpt
+acércate a esa mesa,navigate,es,chatgpt
+ve sin tocar nada hasta la sala,navigate,es,chatgpt
+¿puedes desplazarte al área A?,navigate,es,chatgpt
+camina hacia el objeto rojo,navigate,es,chatgpt
+ir a la esquina,navigate,es,chatgpt
+haz navegación hasta la estación,navigate,es,chatgpt
+go to the hallway,navigate,en,chatgpt
+move over to the door,navigate,en,chatgpt
+can you navigate to the kitchen?,navigate,en,chatgpt
+head toward the charging dock,navigate,en,chatgpt
+approach that table,navigate,en,chatgpt
+go there without interacting,navigate,en,chatgpt
+could you move to zone B?,navigate,en,chatgpt
+walk over near the red object,navigate,en,chatgpt
+navigate to point alpha,navigate,en,chatgpt
+just go there,navigate,en,chatgpt
+recoge el bloque,pick,es,chatgpt
+agarra ese objeto,pick,es,chatgpt
+puedes levantar la caja azul,pick,es,chatgpt
+toma el cilindro,pick,es,chatgpt
+coge eso de ahí,pick,es,chatgpt
+levanta un objeto cercano,pick,es,chatgpt
+¿puedes agarrarlo?,pick,es,chatgpt
+recoger objeto rojo,pick,es,chatgpt
+haz un pick del cubo,pick,es,chatgpt
+toma sin soltarlo,pick,es,chatgpt
+pick up the block,pick,en,chatgpt
+grab that object,pick,en,chatgpt
+can you lift the blue box?,pick,en,chatgpt
+take the cylinder,pick,en,chatgpt
+pick that up,pick,en,chatgpt
+lift a nearby item,pick,en,chatgpt
+could you grab it?,pick,en,chatgpt
+collect the red object,pick,en,chatgpt
+perform a pick action,pick,en,chatgpt
+hold that object,pick,en,chatgpt
+deja el objeto en la mesa,place,es,chatgpt
+suelta eso aquí,place,es,chatgpt
+puedes colocar el cubo en la bandeja,place,es,chatgpt
+ponlo en el suelo,place,es,chatgpt
+deposita el objeto ahí,place,es,chatgpt
+deja lo que tienes,place,es,chatgpt
+¿puedes soltarlo en la zona?,place,es,chatgpt
+coloca el ítem en el contenedor,place,es,chatgpt
+release del objeto,place,es,chatgpt
+pon eso donde corresponde,place,es,chatgpt
+place the object on the table,place,en,chatgpt
+drop it here,place,en,chatgpt
+can you put the cube on the tray?,place,en,chatgpt
+set it on the floor,place,en,chatgpt
+deposit the item there,place,en,chatgpt
+release what you're holding,place,en,chatgpt
+could you place it in the area?,place,en,chatgpt
+put the item in the container,place,en,chatgpt
+execute place action,place,en,chatgpt
+leave it where it belongs,place,en,chatgpt
+trae el objeto rojo,fetch,es,chatgpt
+ve por el cubo y tráelo,fetch,es,chatgpt
+puedes traerme la caja,fetch,es,chatgpt
+busca el cilindro y regresa,fetch,es,chatgpt
+anda a recoger eso y dámelo,fetch,es,chatgpt
+fetch del objeto azul,fetch,es,chatgpt
+consigue el ítem y vuelve,fetch,es,chatgpt
+¿puedes ir por eso?,fetch,es,chatgpt
+trae algo de la mesa,fetch,es,chatgpt
+ve  toma y vuelve con el objeto,fetch,es,chatgpt
+bring me the red object,fetch,en,chatgpt
+go get the cube and return,fetch,en,chatgpt
+can you fetch the box?,fetch,en,chatgpt
+retrieve the cylinder and come back,fetch,en,chatgpt
+go pick that up and bring it,fetch,en,chatgpt
+fetch the blue item,fetch,en,chatgpt
+get the item and return,fetch,en,chatgpt
+could you grab that for me?,fetch,en,chatgpt
+bring something from the table,fetch,en,chatgpt
+go  pick and return with it,fetch,en,chatgpt
+lleva el cubo a la mesa,transport,es,chatgpt
+transporta el objeto a la zona B,transport,es,chatgpt
+puedes mover la caja al estante,transport,es,chatgpt
+lleva eso hasta la puerta,transport,es,chatgpt
+traslada el cilindro al contenedor,transport,es,chatgpt
+mueve el objeto de aquí allá,transport,es,chatgpt
+¿puedes llevarlo al destino?,transport,es,chatgpt
+transporta un objeto cercano,transport,es,chatgpt
+lleva lo que tienes a la estación,transport,es,chatgpt
+haz delivery del ítem,transport,es,chatgpt
+take the cube to the table,transport,en,chatgpt
+transport the object to zone B,transport,en,chatgpt
+can you move the box to the shelf?,transport,en,chatgpt
+carry that to the door,transport,en,chatgpt
+transfer the cylinder to the container,transport,en,chatgpt
+move the object from here to there,transport,en,chatgpt
+could you deliver it to the target?,transport,en,chatgpt
+transport a nearby item,transport,en,chatgpt
+bring what you have to the station,transport,en,chatgpt
+perform item delivery,transport,en,chatgpt
+vuelve a casa,go_home,es,chatgpt
+regresa a la base,go_home,es,chatgpt
+puedes ir a tu posición inicial,go_home,es,chatgpt
+retorna al punto de inicio,go_home,es,chatgpt
+ve de regreso,go_home,es,chatgpt
+home ahora,go_home,es,chatgpt
+¿puedes volver al origen?,go_home,es,chatgpt
+dirígete a tu dock,go_home,es,chatgpt
+termina y vuelve,go_home,es,chatgpt
+regresa sin objetos,go_home,es,chatgpt
+return home,go_home,en,chatgpt
+go back to base,go_home,en,chatgpt
+can you go to your home position?,go_home,en,chatgpt
+return to start point,go_home,en,chatgpt
+head back,go_home,en,chatgpt
+go home now,go_home,en,chatgpt
+could you return to origin?,go_home,en,chatgpt
+navigate to your dock,go_home,en,chatgpt
+finish and go back,go_home,en,chatgpt
+return empty-handed,go_home,en,chatgpt
+ve a la cocina,navigate,es,deepseek
+go to the table,navigate,en,deepseek
+dirígete al punto de carga,navigate,es,deepseek
+move towards the red marker,navigate,en,deepseek
+puedes ir hasta la puerta,navigate,es,deepseek
+head to the starting zone,navigate,en,deepseek
+llevame al área de descanso,navigate,es,deepseek
+navigate to the drop-off location,navigate,en,deepseek
+acércate a la mesa,navigate,es,deepseek
+proceed to the charging station,navigate,en,deepseek
+recoge el cubo azul,pick,es,deepseek
+grab the red object,pick,en,deepseek
+agarra la pieza que está en el suelo,pick,es,deepseek
+pick up the cylinder,pick,en,deepseek
+toma el bloque de la izquierda,pick,es,deepseek
+lift the green item,pick,en,deepseek
+coge ese,pick,es,deepseek
+can you pick that up for me,pick,en,deepseek
+levanta la caja pequeña,pick,es,deepseek
+take the yellow cube,pick,en,deepseek
+deja el cubo en la mesa,place,es,deepseek
+put the object on the tray,place,en,deepseek
+coloca la pieza dentro del contenedor,place,es,deepseek
+release the item onto the platform,place,en,deepseek
+deposita el bloque aquí,place,es,deepseek
+set the cube down by the wall,place,en,deepseek
+suéltalo en la zona verde,place,es,deepseek
+place the cylinder on the table,place,en,deepseek
+déjalo donde estabas antes,place,es,deepseek
+put it back in its place,place,en,deepseek
+trae el cubo rojo,fetch,es,deepseek
+fetch the blue cube,fetch,en,deepseek
+ve y tráeme la botella,fetch,es,deepseek
+go get the box from the shelf,fetch,en,deepseek
+puedes buscar el martillo y traerlo,fetch,es,deepseek
+bring me the object near the door,fetch,en,deepseek
+recoge la llave y ven aquí,fetch,es,deepseek
+retrieve the green cylinder,fetch,en,deepseek
+consigue la pieza que está en la otra habitación,fetch,es,deepseek
+go and get the remote control,fetch,en,deepseek
+lleva el cilindro a la bandeja,transport,es,deepseek
+move the box to the drop zone,transport,en,deepseek
+transporta el bloque desde la mesa hasta el estante,transport,es,deepseek
+carry the red cube to the charging station,transport,en,deepseek
+traslada la carga al área designada,transport,es,deepseek
+take the cylinder to the other side of the room,transport,en,deepseek
+deposita el objeto en el punto B,transport,es,deepseek
+bring the box over to the conveyor,transport,en,deepseek
+desplaza la pieza hacia la derecha,transport,es,deepseek
+relocate the item to the new position,transport,en,deepseek
+vuelve a casa,go_home,es,deepseek
+return to home position,go_home,en,deepseek
+regresa al punto de inicio,go_home,es,deepseek
+go back to the base,go_home,en,deepseek
+ve a tu posición original,go_home,es,deepseek
+head back to the dock,go_home,en,deepseek
+puedes volver al lugar donde empezaste,go_home,es,deepseek
+navigate to the home spot,go_home,en,deepseek
+retrocede a la posición de reposo,go_home,es,deepseek
+go to the starting point,go_home,en,deepseek
+dirígete hacia el pasillo central,navigate,es,gemini
+¿podrías ir al laboratorio?,navigate,es,gemini
+muévete a estación 3,navigate,es,gemini
+acércate a la puerta principal  por favor,navigate,es,gemini
+camina pa la sala,navigate,es,gemini
+navigate to the charging area,navigate,en,gemini
+can you roll over to the desk?,navigate,en,gemini
+head to sector B,navigate,en,gemini
+proceed to the conference room,navigate,en,gemini
+go near the window,navigate,en,gemini
+agarra la botella de agua,pick,es,gemini
+toma el destornillador,pick,es,gemini
+levanta ese bloque verde,pick,es,gemini
+¿puedes coger el objeto que está ahí?,pick,es,gemini
+sujeta herramienta,pick,es,gemini
+pick up the red mug,pick,en,gemini
+grab that wrench for me,pick,en,gemini
+could you lift the heavy box?,pick,en,gemini
+take the apple,pick,en,gemini
+acquire target object,pick,en,gemini
+suelta eso en el piso,place,es,gemini
+deposita la carga sobre la repisa,place,es,gemini
+deja el libro aquí,place,es,gemini
+¿puedes poner el vaso en la mesa?,place,es,gemini
+ubica pieza en caja,place,es,gemini
+put it down on the counter,place,en,gemini
+release the payload right here,place,en,gemini
+drop the cube into the bin,place,en,gemini
+can you set the item on the desk?,place,en,gemini
+place it on top of the shelf,place,en,gemini
+tráeme las llaves,fetch,es,gemini
+ve por mi café  porfa,fetch,es,gemini
+consígueme un marcador de la oficina,fetch,es,gemini
+¿puedes ir a buscar la caja de herramientas?,fetch,es,gemini
+tráete esa manzana,fetch,es,gemini
+fetch me the blue binder,fetch,en,gemini
+go get the screwdriver,fetch,en,gemini
+can you bring me a bottle of water?,fetch,en,gemini
+retrieve the printed document,fetch,en,gemini
+grab a snack and bring it here,fetch,en,gemini
+lleva este paquete a recepción,transport,es,gemini
+mueve la silla al otro cuarto,transport,es,gemini
+traslada el equipo hacia el almacén,transport,es,gemini
+¿podrías llevarle esta carpeta a Juan?,transport,es,gemini
+lleva caja a zona de descarga,transport,es,gemini
+transport the medical supplies to room 204,transport,en,gemini
+take this cup to the kitchen sink,transport,en,gemini
+can you carry the box to the lobby?,transport,en,gemini
+deliver the parcel to the front desk,transport,en,gemini
+move item from table to conveyor belt,transport,en,gemini
+regresa a tu base,go_home,es,gemini
+vete a cargar,go_home,es,gemini
+vuelve al punto de inicio,go_home,es,gemini
+¿puedes irte a tu estación?,go_home,es,gemini
+retorna a posición cero,go_home,es,gemini
+return to your charging dock,go_home,en,gemini
+go back to start,go_home,en,gemini
+head home now,go_home,en,gemini
+could you return to base?,go_home,en,gemini
+navigate to origin,go_home,en,gemini
+text,intent,lang,
+ve a la cocina,navigate,es,mistral
+go to the table,navigate,en,mistral
+dirígete al punto de carga,navigate,es,mistral
+head to the living room,navigate,en,mistral
+muévete hasta la puerta,navigate,es,mistral
+move to the kitchen,navigate,en,mistral
+llega hasta la mesa,navigate,es,mistral
+navigate to the charging station,navigate,en,mistral
+anda a la sala,navigate,es,mistral
+proceed to the drop zone,navigate,en,mistral
+recoge el cubo azul,pick,es,mistral
+grab the red object,pick,en,mistral
+levanta la pieza verde,pick,es,mistral
+pick up the small box,pick,en,mistral
+toma el cilindro,pick,es,mistral
+take the blue cube,pick,en,mistral
+agarra el objeto de la mesa,pick,es,mistral
+collect the item from the shelf,pick,en,mistral
+coge el paquete,pick,es,mistral
+retrieve the tool,pick,en,mistral
+deja el cubo en la mesa,place,es,mistral
+put the object on the tray,place,en,mistral
+suelta el cilindro en la bandeja,place,es,mistral
+place the box on the table,place,en,mistral
+deposita el objeto aquí,place,es,mistral
+drop the item at the marked spot,place,en,mistral
+pon el cubo en el estante,place,es,mistral
+set the object down gently,place,en,mistral
+coloca el paquete en la caja,place,es,mistral
+leave the tool on the bench,place,en,mistral
+trae el cubo rojo,fetch,es,mistral
+fetch the blue cube,fetch,en,mistral
+busca el objeto y tráelo,fetch,es,mistral
+go get the red cylinder,fetch,en,mistral
+ve por el paquete,fetch,es,mistral
+bring me the small box,fetch,en,mistral
+recoge el cilindro y ven,fetch,es,mistral
+fetch the tool from the shelf,fetch,en,mistral
+tráeme el objeto de la mesa,fetch,es,mistral
+get the item from the kitchen,fetch,en,mistral
+lleva el cilindro a la bandeja,transport,es,mistral
+move the box to the drop zone,transport,en,mistral
+transfiere el cubo a la mesa,transport,es,mistral
+carry the object to the table,transport,en,mistral
+traslada el paquete al almacén,transport,es,mistral
+take the cube to the charging station,transport,en,mistral
+mueve el cilindro a la sala,transport,es,mistral
+transport the red box to the kitchen,transport,en,mistral
+lleva esto hasta la puerta,transport,es,mistral
+deliver the item to the drop zone,transport,en,mistral
+vuelve a casa,go_home,es,mistral
+return to home position,go_home,en,mistral
+regresa al punto de inicio,go_home,es,mistral
+go back to the starting point,go_home,en,mistral
+ve a tu posición inicial,go_home,es,mistral
+return to base,go_home,en,mistral
+vuelve al origen,go_home,es,mistral
+head back to home,go_home,en,mistral
+regresa a casa  por favor,go_home,es,mistral
+go home now,go_home,en,mistral
+puedes ir a la cocina?,navigate,es,mistral
+can you go to the table?,navigate,en,mistral
+sería posible que fueras a la sala?,navigate,es,mistral
+would you move to the kitchen?,navigate,en,mistral
+necesito que vayas a la puerta,navigate,es,mistral
+could you navigate to the drop zone?,navigate,en,mistral
+me harías el favor de ir a la mesa?,navigate,es,mistral
+would you mind going to the living room?,navigate,en,mistral
+podrías recoger el cubo azul?,pick,es,mistral
+can you grab the red object?,pick,en,mistral
+serías tan amable de levantar la pieza verde?,pick,es,mistral
+would you pick up the small box?,pick,en,mistral
+necesito que tomes el cilindro,pick,es,mistral
+could you take the blue cube?,pick,en,mistral
+puedes dejar el cubo en la mesa?,place,es,mistral
+can you put the object on the tray?,place,en,mistral
+sería posible que soltaras el cilindro en la bandeja?,place,es,mistral
+would you place the box on the table?,place,en,mistral
+podrías traer el cubo rojo?,fetch,es,mistral
+can you fetch the blue cube?,fetch,en,mistral
+me harías el favor de buscar el objeto y traerlo?,fetch,es,mistral
+would you go get the red cylinder?,fetch,en,mistral
+necesito que lleves el cilindro a la bandeja,transport,es,mistral
+could you move the box to the drop zone?,transport,en,mistral
+serías tan amable de regresar a casa?,go_home,es,mistral
+would you return to home position?,go_home,en,mistral
+Move to the living room,navigate,en,grok
+Head over to the lab,navigate,en,grok
+Can you navigate to the door?,navigate,en,grok
+Please go towards the window,navigate,en,grok
+Proceed to the charging station,navigate,en,grok
+Dirígete a la sala de estar,navigate,es,grok
+Por favor  ve al laboratorio,navigate,es,grok
+¿Puedes ir a la puerta principal?,navigate,es,grok
+Muévete hacia la estantería,navigate,es,grok
+Navega hasta el área de trabajo,navigate,es,grok
+Pick up the blue object,pick,en,grok
+Grab the red cube,pick,en,grok
+Lift the small ball,pick,en,grok
+Can you take that item?,pick,en,grok
+Retrieve the cylinder from the floor,pick,en,grok
+Agarra el bloque azul,pick,es,grok
+Toma el libro  por favor,pick,es,grok
+¿Puedes levantar el objeto?,pick,es,grok
+Coge la pelota roja,pick,es,grok
+Recoge el cilindro verde,pick,es,grok
+Put the object on the table,place,en,grok
+Place it down here,place,en,grok
+Drop the cube on the tray,place,en,grok
+Set the item at the drop zone,place,en,grok
+Release the ball  please,place,en,grok
+Deja el objeto en la mesa,place,es,grok
+Coloca el cubo allí,place,es,grok
+¿Puedes soltar el libro?,place,es,grok
+Deposita el bloque en la bandeja,place,es,grok
+Suelta el cilindro  por favor,place,es,grok
+Fetch the red object,fetch,en,grok
+Bring me the blue cube,fetch,en,grok
+Go get the book and return,fetch,en,grok
+Retrieve the ball from the shelf,fetch,en,grok
+Can you fetch the cylinder?,fetch,en,grok
+Trae el objeto azul,fetch,es,grok
+Ve por el cubo rojo y tráelo,fetch,es,grok
+¿Puedes buscar el libro?,fetch,es,grok
+Recupera la pelota y devuélvela,fetch,es,grok
+Busca el cilindro y tráemelo,fetch,es,grok
+Carry the object to the kitchen,transport,en,grok
+Transport the cube to the shelf,transport,en,grok
+Move the ball from here to there,transport,en,grok
+Take this item to the lab,transport,en,grok
+Relocate the cylinder to the tray,transport,en,grok
+Lleva el cubo a la estantería,transport,es,grok
+Transporta el objeto a la mesa,transport,es,grok
+¿Puedes llevar el libro al laboratorio?,transport,es,grok
+Mueve el bloque de la mesa a la silla,transport,es,grok
+Traslada el cilindro a la bandeja,transport,es,grok
+Return to home,go_home,en,grok
+Go back to start position,go_home,en,grok
+Head to the initial spot,go_home,en,grok
+Reset to base,go_home,en,grok
+Return to your starting point,go_home,en,grok
+Regresa a la posición inicial,go_home,es,grok
+Vuelve al inicio,go_home,es,grok
+¿Puedes volver a casa?,go_home,es,grok
+Dirígete al punto de origen,go_home,es,grok
+Ve a la posición base,go_home,es,grok

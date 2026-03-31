@@ -7,7 +7,18 @@ import pandas as pd
 from pathlib import Path
 from sklearn.model_selection import train_test_split
 
-INTENTS = ["navigate", "pick", "place", "fetch", "transport", "go_home"]
+INTENTS = ["navigate", "pick", "place"]
+
+# Remapeo de 6 clases originales → 3 clases atómicas
+# go_home es un navigate con destination="home" (entity extractor lo resuelve)
+# fetch es un pick (Task Planning descompone en move_to + grasp)
+# transport es un place (Task Planning descompone en move_to + grasp + move_to + release)
+INTENT_REMAP = {
+    "go_home": "navigate",
+    "fetch": "pick",
+    "transport": "place",
+}
+
 DATA_DIR = Path(__file__).parent.parent / "data"
 
 def load_data() -> pd.DataFrame:

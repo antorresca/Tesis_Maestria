@@ -1,13 +1,10 @@
-# Modelos entrenados (pueden pesar varios GB)
-models/
-!models/.gitkeep
+# Pesos del modelo (archivos grandes, no van en git)
+models/**/*.safetensors
+models/**/*.bin
+models/**/*.pt
 
 # Datos procesados (se regeneran con prepare_dataset.py)
 data/processed/
-!data/processed/.gitkeep
-
-# Resultados de evaluación (se regeneran con evaluate.py)
-data/evaluation_results.json
 
 # Python
 __pycache__/

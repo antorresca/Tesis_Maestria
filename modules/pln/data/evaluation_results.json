@@ -1,0 +1,20 @@
+{
+  "mbert": {
+    "model": "mbert",
+    "accuracy": 0.8636363636363636,
+    "f1_weighted": 0.8636949752510393,
+    "f1_macro": 0.8634671329179339,
+    "inference_time_s": 0.7641012879998925,
+    "ms_per_sample": 11.577292242422615,
+    "model_size_mb": 711.432216
+  },
+  "xlmr": {
+    "model": "xlmr",
+    "accuracy": 0.8636363636363636,
+    "f1_weighted": 0.8681066408339134,
+    "f1_macro": 0.8722388722388722,
+    "inference_time_s": 0.39153706299975966,
+    "ms_per_sample": 5.932379742420601,
+    "model_size_mb": 1112.193048
+  }
+}
