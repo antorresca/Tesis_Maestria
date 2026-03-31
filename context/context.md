@@ -151,3 +151,4 @@ roslaunch ... general_launch.launch gui:=false  # headless (~921 Hz, obligatorio
 - ¿Task Planning genera comandos en espacio Cartesiano o de configuración?
 - ¿Comparación PPO vs SAC requiere publicación o solo es para la tesis?
 - ¿Observación DRL incluye lidar simulado o solo pose del robot?
+- **[Brainstorm]** ¿Un agente DRL único o agentes dedicados por tarea (`NavigateAgent`, `PickAgent`, `PlaceAgent`)? Agentes dedicados simplifican el entrenamiento, localizan fallos y abren la puerta a HRL con Task Planning como meta-controlador. Ver bitácora 30-03-2026.

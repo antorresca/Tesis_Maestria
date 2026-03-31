@@ -80,7 +80,7 @@ def _find_destination(text: str) -> Optional[str]:
     # Busca: [preposición de destino] [artículo?] [location]
     pattern = (
         rf"(?:{DEST_PREPS_ES}|{DEST_PREPS_EN})"
-        rf"\s+(?:el|la|los|las|the|a|an\s+)?"
+        rf"\s+(?:el|la|los|las|the|an?|un[ao]?)?\s*"
         rf"({LOC_PAT})"
     )
     m = re.search(pattern, text, re.IGNORECASE)
