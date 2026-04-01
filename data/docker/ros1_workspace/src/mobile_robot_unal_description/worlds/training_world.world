@@ -1,0 +1,203 @@
+<?xml version="1.0" ?>
+<!--
+  training_world.world
+  --------------------
+  Escena de entrenamiento para el módulo DRL (Fase 4).
+
+  Objetos y poses (frame world):
+    table       (2.0,  0.0,  0.375)  — mesa estática, 0.8×0.6×0.75 m
+    red_cube    (2.0,  0.0,  0.775)  — cubo rojo dinámico sobre la mesa, 0.05 m
+    tray        (3.0, -1.5,  0.020)  — bandeja destino en el suelo, 0.4×0.4×0.04 m
+    green_zone  (-1.5, 1.5,  0.010)  — zona verde de navegación en el suelo, 0.5×0.5×0.02 m
+    obstacle_1  (1.0,  0.8,  0.250)  — obstáculo estático izquierda, 0.3×0.3×0.5 m
+    obstacle_2  (1.0, -0.8,  0.250)  — obstáculo estático derecha,   0.3×0.3×0.5 m
+
+  Robot spawn: (0, 0, 0) mirando +X
+
+  Alturas de referencia para goal_builder.py:
+    Z_TRAVEL = 0.60  m  (libre de obstáculos 0.5 m)
+    Z_PICK   = 0.85  m  (5 cm sobre el cubo en z=0.775)
+    Z_PLACE  = 0.12  m  (10 cm sobre la bandeja en z=0.02)
+-->
+<sdf version="1.6">
+  <world name="training_world">
+
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
+    <!-- Misma física que empty_world -->
+    <physics name="default_physics" default="0" type="ode">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
+      <ode>
+        <solver>
+          <iters>50</iters>
+        </solver>
+      </ode>
+    </physics>
+
+    <!-- ================================================================ -->
+    <!-- MESA (estática)                                                   -->
+    <!-- 0.8 × 0.6 × 0.75 m  |  pose = centro geométrico                 -->
+    <!-- ================================================================ -->
+    <model name="table">
+      <static>true</static>
+      <pose>2.0 0.0 0.375 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box><size>0.8 0.6 0.75</size></box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box><size>0.8 0.6 0.75</size></box>
+          </geometry>
+          <material>
+            <ambient>0.6 0.4 0.2 1</ambient>
+            <diffuse>0.6 0.4 0.2 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ================================================================ -->
+    <!-- CUBO ROJO (dinámico — manipulable)                               -->
+    <!-- 0.05 × 0.05 × 0.05 m  |  sobre la mesa: z = 0.75 + 0.025 = 0.775 -->
+    <!-- ================================================================ -->
+    <model name="red_cube">
+      <pose>2.0 0.0 0.775 0 0 0</pose>
+      <link name="link">
+        <inertial>
+          <mass>0.1</mass>
+          <inertia>
+            <ixx>4.17e-5</ixx><ixy>0</ixy><ixz>0</ixz>
+            <iyy>4.17e-5</iyy><iyz>0</iyz>
+            <izz>4.17e-5</izz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry>
+            <box><size>0.05 0.05 0.05</size></box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box><size>0.05 0.05 0.05</size></box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.1 0.1 1</ambient>
+            <diffuse>0.8 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ================================================================ -->
+    <!-- BANDEJA / tray (estática — destino de place)                     -->
+    <!-- 0.4 × 0.4 × 0.04 m en el suelo                                  -->
+    <!-- ================================================================ -->
+    <model name="tray">
+      <static>true</static>
+      <pose>3.0 -1.5 0.02 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box><size>0.4 0.4 0.04</size></box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box><size>0.4 0.4 0.04</size></box>
+          </geometry>
+          <material>
+            <ambient>0.6 0.4 0.1 1</ambient>
+            <diffuse>0.6 0.4 0.1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ================================================================ -->
+    <!-- ZONA VERDE (estática — destino de navigate)                      -->
+    <!-- 0.5 × 0.5 × 0.02 m, marcador plano en el suelo                  -->
+    <!-- ================================================================ -->
+    <model name="green_zone">
+      <static>true</static>
+      <pose>-1.5 1.5 0.01 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box><size>0.5 0.5 0.02</size></box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box><size>0.5 0.5 0.02</size></box>
+          </geometry>
+          <material>
+            <ambient>0.1 0.8 0.1 1</ambient>
+            <diffuse>0.1 0.8 0.1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ================================================================ -->
+    <!-- OBSTÁCULO 1 (estático — izquierda del camino al objetivo)        -->
+    <!-- 0.3 × 0.3 × 0.5 m                                               -->
+    <!-- ================================================================ -->
+    <model name="obstacle_1">
+      <static>true</static>
+      <pose>1.0 0.8 0.25 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box><size>0.3 0.3 0.5</size></box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box><size>0.3 0.3 0.5</size></box>
+          </geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.5 0.5 0.5 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ================================================================ -->
+    <!-- OBSTÁCULO 2 (estático — derecha del camino al objetivo)          -->
+    <!-- 0.3 × 0.3 × 0.5 m                                               -->
+    <!-- ================================================================ -->
+    <model name="obstacle_2">
+      <static>true</static>
+      <pose>1.0 -0.8 0.25 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box><size>0.3 0.3 0.5</size></box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box><size>0.3 0.3 0.5</size></box>
+          </geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.5 0.5 0.5 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

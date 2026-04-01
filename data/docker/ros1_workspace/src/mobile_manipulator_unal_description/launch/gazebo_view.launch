@@ -11,6 +11,11 @@
     <!-- gui:=true  → Gazebo + RViz  (debug)
          gui:=false → Gazebo headless, sin RViz (entrenamiento DRL) -->
     <arg name="gui" default="true"/>
+    <!-- Nombre del mundo a cargar (sin extensión .world).
+         Opciones disponibles en mobile_robot_unal_description/worlds/:
+           empty_world    → mundo vacío (default)
+           training_world → escena de entrenamiento DRL (Fase 4) -->
+    <arg name="world" default="empty_world"/>
 
     <!-- Load the urdf into the parameter server. -->
     <arg name="robot_xacro" value="$(find mobile_robot_unal_description)/urdf/mobile_base.urdf.xacro
@@ -61,7 +66,7 @@
     <!-- Launch Gazebo-->
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
         <!-- <arg name="world_name" value="worlds/empty.world"/>  -->
-        <arg name="world_name" value="$(find mobile_robot_unal_description)/worlds/empty_world.world"/>
+        <arg name="world_name" value="$(find mobile_robot_unal_description)/worlds/$(arg world).world"/>
         <arg name="use_sim_time" value="true"/>
         <arg name="debug" value="false"/>
         <arg name="paused" value="true"/>

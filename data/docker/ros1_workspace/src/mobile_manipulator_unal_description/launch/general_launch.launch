@@ -3,12 +3,15 @@
     <arg name="robot_name" default="mobile_manipulator"/>
     <!-- Pasar gui:=false para entrenamiento headless (sin Gazebo GUI ni RViz) -->
     <arg name="gui" default="true"/>
+    <!-- Mundo a cargar: empty_world (default) o training_world (DRL Fase 4) -->
+    <arg name="world" default="empty_world"/>
 
     <node pkg="mobile_robot_unal_description" type="gazebo_to_ekf" name="gazebo_to_ekf" output="screen" />
     <!-- SIMULATION -->
     <include file="$(find mobile_manipulator_unal_description)/launch/gazebo_view.launch">
         <arg name="robot_name" value="$(arg robot_name)"/>
         <arg name="gui" value="$(arg gui)"/>
+        <arg name="world" value="$(arg world)"/>
     </include>
 
     <!-- WAIT FOR GAZEBO CLOCK -->

@@ -38,8 +38,9 @@ LOCATIONS = [
 ]
 
 # Preposiciones de destino (ES/EN)
-DEST_PREPS_ES = r"(?:a|hacia|hasta|en|sobre|encima de|dentro de)"
-DEST_PREPS_EN = r"(?:to|towards|onto|on|in|into|at)"
+# \b garantiza que "a" no coincida dentro de palabras como "la", "casa", etc.
+DEST_PREPS_ES = r"(?:\b(?:a|hacia|hasta|en|sobre)\b|encima de|dentro de)"
+DEST_PREPS_EN = r"(?:\b(?:to|on|in|at)\b|towards|onto|into)"
 
 
 @dataclass
@@ -51,10 +52,12 @@ class Entities:
 def _build_object_pattern() -> str:
     colors_pat = "|".join(COLORS)
     objects_pat = "|".join(OBJECTS)
-    # Coincide con: "cubo", "cubo azul", "el cubo azul", "blue cube"
+    # Las alternativas van de más específica a menos para que re.search
+    # prefiera "cubo rojo" sobre solo "cubo".
     return (
-        rf"(?:(?:{colors_pat})\s+)?(?:{objects_pat})"
-        rf"|(?:{objects_pat})(?:\s+(?:{colors_pat}))?"
+        rf"(?:{colors_pat})\s+(?:{objects_pat})"   # "blue cube" / "rojo cubo"
+        rf"|(?:{objects_pat})\s+(?:{colors_pat})"   # "cubo rojo" / "cube red"
+        rf"|(?:{objects_pat})"                      # "cubo" (sin color)
     )
 
 

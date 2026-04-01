@@ -68,6 +68,33 @@ data/
 
 ---
 
+## Módulos IA (`modules/`)
+
+```
+modules/
+├── requirements.txt                        # deps base (roslibpy, numpy)
+├── robot_interface/
+│   └── robot_interface.py                  # puente roslibpy↔DRL
+├── pln/
+│   ├── requirements_pln.txt
+│   ├── data/raw/                           # dataset semilla CSV + prompt LLM
+│   ├── data/processed/                     # splits train/val/test
+│   ├── models/                             # modelos fine-tuneados (gitignored)
+│   └── src/
+│       ├── prepare_dataset.py
+│       ├── dataset.py
+│       ├── train.py
+│       ├── evaluate.py
+│       ├── entity_extractor.py             # extractor reglas/regex (3 clases)
+│       └── pln_module.py                   # interfaz: predict(text) → JSON
+└── goal_builder/
+    └── goal_builder.py                     # Fase 3: PLN JSON → pose_goal
+                                            # consulta /gazebo/get_model_state
+                                            # lookup table ENTITY_TO_GAZEBO
+```
+
+---
+
 ## Notas clave
 
 - **Interfaz principal con el WBC:** topic `/mobile_manipulator/desired_traj` tipo `mobile_manipulator_msgs/Trajectory`
