@@ -4,19 +4,25 @@
   --------------------
   Escena de entrenamiento para el módulo DRL (Fase 4).
 
+  EE home medido: (0.536, 0.000, 0.747)  — robot spawn (0,0,0)
+
   Objetos y poses (frame world):
-    table       (2.0,  0.0,  0.375)  — mesa estática, 0.8×0.6×0.75 m
-    red_cube    (2.0,  0.0,  0.775)  — cubo rojo dinámico sobre la mesa, 0.05 m
-    tray        (3.0, -1.5,  0.020)  — bandeja destino en el suelo, 0.4×0.4×0.04 m
-    green_zone  (-1.5, 1.5,  0.010)  — zona verde de navegación en el suelo, 0.5×0.5×0.02 m
-    obstacle_1  (1.0,  0.8,  0.250)  — obstáculo estático izquierda, 0.3×0.3×0.5 m
-    obstacle_2  (1.0, -0.8,  0.250)  — obstáculo estático derecha,   0.3×0.3×0.5 m
+    table       (1.2,  0.0,  0.05)   — plataforma baja estática, 0.8×0.6×0.10 m
+    red_cube    (1.2,  0.0,  0.125)  — cubo rojo dinámico sobre plataforma, 0.05 m
+    tray        (1.8, -0.8,  0.020)  — bandeja destino en el suelo, 0.4×0.4×0.04 m
+    green_zone  (-0.8, 0.8,  0.010)  — zona verde de navegación en el suelo, 0.5×0.5×0.02 m
+    obstacle_1  (0.7,  0.5,  0.250)  — obstáculo estático izquierda, 0.3×0.3×0.5 m
+    obstacle_2  (0.7, -0.5,  0.250)  — obstáculo estático derecha,   0.3×0.3×0.5 m
 
   Robot spawn: (0, 0, 0) mirando +X
+  EE home: (0.536, 0.000, 0.747)
+
+  Lógica pick: base navega a x≈0.6-0.8, brazo baja de z=0.747 → z=0.125
+  Plataforma baja (h=0.10m) — la base no colisiona lateralmente al acercarse.
 
   Alturas de referencia para goal_builder.py:
-    Z_TRAVEL = 0.60  m  (libre de obstáculos 0.5 m)
-    Z_PICK   = 0.85  m  (5 cm sobre el cubo en z=0.775)
+    Z_TRAVEL = 0.75  m  (igual que EE home — sin cambio Z para navigate)
+    Z_PICK   = 0.15  m  (3 cm sobre el cubo en z=0.125)
     Z_PLACE  = 0.12  m  (10 cm sobre la bandeja en z=0.02)
 -->
 <sdf version="1.6">
@@ -43,21 +49,23 @@
     </physics>
 
     <!-- ================================================================ -->
-    <!-- MESA (estática)                                                   -->
-    <!-- 0.8 × 0.6 × 0.75 m  |  pose = centro geométrico                 -->
+    <!-- PLATAFORMA BAJA (estática)                                        -->
+    <!-- 0.8 × 0.6 × 0.10 m  |  pose = centro geométrico                 -->
+    <!-- Altura reducida para que la base del robot NO colisione al       -->
+    <!-- acercarse. El brazo baja desde EE home (z=0.747) hasta z≈0.125. -->
     <!-- ================================================================ -->
     <model name="table">
       <static>true</static>
-      <pose>2.0 0.0 0.375 0 0 0</pose>
+      <pose>1.2 0.0 0.05 0 0 0</pose>
       <link name="link">
         <collision name="collision">
           <geometry>
-            <box><size>0.8 0.6 0.75</size></box>
+            <box><size>0.8 0.6 0.10</size></box>
           </geometry>
         </collision>
         <visual name="visual">
           <geometry>
-            <box><size>0.8 0.6 0.75</size></box>
+            <box><size>0.8 0.6 0.10</size></box>
           </geometry>
           <material>
             <ambient>0.6 0.4 0.2 1</ambient>
@@ -69,10 +77,10 @@
 
     <!-- ================================================================ -->
     <!-- CUBO ROJO (dinámico — manipulable)                               -->
-    <!-- 0.05 × 0.05 × 0.05 m  |  sobre la mesa: z = 0.75 + 0.025 = 0.775 -->
+    <!-- 0.05 × 0.05 × 0.05 m  |  sobre plataforma: z = 0.10 + 0.025 = 0.125 -->
     <!-- ================================================================ -->
     <model name="red_cube">
-      <pose>2.0 0.0 0.775 0 0 0</pose>
+      <pose>1.2 0.0 0.125 0 0 0</pose>
       <link name="link">
         <inertial>
           <mass>0.1</mass>
@@ -105,7 +113,7 @@
     <!-- ================================================================ -->
     <model name="tray">
       <static>true</static>
-      <pose>3.0 -1.5 0.02 0 0 0</pose>
+      <pose>1.8 -0.8 0.02 0 0 0</pose>
       <link name="link">
         <collision name="collision">
           <geometry>
@@ -130,7 +138,7 @@
     <!-- ================================================================ -->
     <model name="green_zone">
       <static>true</static>
-      <pose>-1.5 1.5 0.01 0 0 0</pose>
+      <pose>-0.8 0.8 0.01 0 0 0</pose>
       <link name="link">
         <collision name="collision">
           <geometry>
@@ -155,7 +163,7 @@
     <!-- ================================================================ -->
     <model name="obstacle_1">
       <static>true</static>
-      <pose>1.0 0.8 0.25 0 0 0</pose>
+      <pose>0.7 0.5 0.25 0 0 0</pose>
       <link name="link">
         <collision name="collision">
           <geometry>
@@ -180,7 +188,7 @@
     <!-- ================================================================ -->
     <model name="obstacle_2">
       <static>true</static>
-      <pose>1.0 -0.8 0.25 0 0 0</pose>
+      <pose>0.7 -0.5 0.25 0 0 0</pose>
       <link name="link">
         <collision name="collision">
           <geometry>

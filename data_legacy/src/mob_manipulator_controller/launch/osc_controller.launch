@@ -7,6 +7,11 @@
     <arg name="robot_name" default="mobile_manipulator"/>
     <arg name="use_EKF" value="false"/>
 
+    <!-- Delay (s) antes de arrancar el WBC. Usar delay:=5 desde drl_launch
+         para dar tiempo al spawn_model y controladores a publicar joint_states
+         antes de que el WBC lea q_k. Default 0 = comportamiento original. -->
+    <arg name="delay" default="0"/>
+
     <!-- ******************************************************************* -->
     <!-- ******************************************************************* -->
     <!-- Arguments to load the model in DART -->
@@ -44,8 +49,9 @@
     <!-- ******************************************************************* -->
     <!-- ******************************************************************* -->
     <!-- OSC Controller-->
-    <node   pkg="mob_manipulator_controller" type="mob_manipulator_controller" name="osc_controller" 
-            ns="$(arg robot_name)" output="screen">
+    <node   pkg="mob_manipulator_controller" type="mob_manipulator_controller" name="osc_controller"
+            ns="$(arg robot_name)" output="screen"
+            launch-prefix="bash -c 'sleep $(arg delay) &amp;&amp; exec &quot;$0&quot; &quot;$@&quot;'">
         
         <!-- Load parameters from YAML file -->
         <rosparam file="$(find mob_manipulator_controller)/config/config.yaml" command="load"/>
