@@ -148,11 +148,16 @@
         <param name="broadcast_transform" value="true"/>
     </node>
 
+    <!-- Delay antes de arrancar el WBC. En drl_launch se pasa delay:=5 para
+         dar tiempo al spawn + controladores antes de que el WBC lea q_k. -->
+    <arg name="wbc_delay" default="0"/>
+
     <!-- ================================================================== -->
     <!-- WBC (OSC) + publicador de velocidades globales                      -->
     <!-- ================================================================== -->
     <include file="$(find mob_manipulator_controller)/launch/osc_controller.launch">
         <arg name="robot_name" value="$(arg robot_name)"/>
+        <arg name="delay"      value="$(arg wbc_delay)"/>
     </include>
 
 </launch>

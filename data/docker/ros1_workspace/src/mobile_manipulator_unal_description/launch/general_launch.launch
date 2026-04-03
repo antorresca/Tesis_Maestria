@@ -23,6 +23,14 @@
         <arg name="robot_name" value="$(arg robot_name)"/>
     </include>
 
+    <!-- INIT GOAL PUBLISHER — evita auto-colisión al arranque.              -->
+    <!-- Espera el primer estado del WBC y publica "hold pose" a 50 Hz       -->
+    <!-- durante 5 s para que el controlador no persiga un goal por defecto. -->
+    <node pkg="mobile_manipulator_unal_description"
+          type="init_goal_publisher.py"
+          name="init_goal_publisher"
+          output="screen" />
+
     <!-- ROSBRIDGE — WebSocket bridge para módulos IA externos (puerto 9090) -->
     <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch">
         <arg name="port" value="9090"/>

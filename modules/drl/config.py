@@ -51,7 +51,9 @@ MAX_STEPS        = 300    # pasos máximos — episodios más cortos = más dive
 # Ajustar según el tamaño real de training_world.world.
 WORKSPACE_X = (-2.5,  2.5)   # m
 WORKSPACE_Y = (-2.5,  2.5)   # m
-WORKSPACE_Z = ( 0.05, 1.2)   # m
+WORKSPACE_Z = ( 0.35, 1.2)   # m — mín elevado para navigate: evita que el brazo
+                              #     baje hasta la base durante exploración aleatoria.
+                              #     Para pick/place (z_goal ≈ 0.15 m) bajar a 0.10.
 
 # Tiempo de espera después de send_goal antes de leer el estado
 # (~921 Hz headless → ~1 ms por ciclo WBC; 0.1 s da ~92 ciclos de margen)
@@ -86,31 +88,26 @@ TRAINING_OBSTACLE_MODELS: list = [
 # Goals de entrenamiento por defecto (pose_goal format)
 # Usados en reset() cuando no se proporciona pose_goal vía options.
 # ---------------------------------------------------------------------------
-# Goals cortos para entrenamiento inicial — ACTUALIZAR con posición real del EE en home.
-# El robot spawna en (0,0,0) pero el EE no está en (0,0,0).
-# Paso 1: correr `rostopic echo /mobile_manipulator/data -n 1` tras reset
-#         y anotar current_position (x_home, y_home, z_home).
-# Paso 2: estos goals deben estar a 0.4–1.2 m del home EE, no del origen.
-#
-# PLACEHOLDER — reemplazar x_h/y_h/z_h con los valores reales del EE home.
-# Por ahora se usan deltas relativos al origen asumiendo EE home ≈ (0.3, 0, 0.4).
-_EE_HOME = (0.3, 0.0, 0.4)   # ← AJUSTAR tras medir con rostopic
+# EE home medido: rostopic echo /mobile_manipulator/data -n 1  (2026-04-02)
+_EE_HOME = (0.536, 0.000, 0.747)   # posición real del efector en spawn (0,0,0)
 
 DEFAULT_TRAINING_GOALS = [
-    # navigate corto — 0.5–1.0 m del EE home, misma altura Z (sin cambio vertical)
+    # navigate — orientación neutral (identidad) en todos: para navigate el brazo
+    # mantiene su pose home y el WBC mueve la base. Evitar orientaciones grandes
+    # (ej. 180°) que fuerzan al brazo a contorsionarse y auto-colisionar.
     {"x": _EE_HOME[0]+0.6, "y": _EE_HOME[1]+0.0, "z": _EE_HOME[2],
-     "qx": 0.0, "qy": 0.0, "qz": 0.0,    "qw": 1.0,   "intent": "navigate"},
-    {"x": _EE_HOME[0]-0.6, "y": _EE_HOME[1]+0.0, "z": _EE_HOME[2],
-     "qx": 0.0, "qy": 0.0, "qz": 1.0,    "qw": 0.0,   "intent": "navigate"},
+     "qx": 0.0, "qy": 0.0, "qz": 0.0, "qw": 1.0, "intent": "navigate"},
     {"x": _EE_HOME[0]+0.0, "y": _EE_HOME[1]+0.6, "z": _EE_HOME[2],
-     "qx": 0.0, "qy": 0.0, "qz": 0.707,  "qw": 0.707, "intent": "navigate"},
+     "qx": 0.0, "qy": 0.0, "qz": 0.0, "qw": 1.0, "intent": "navigate"},
     {"x": _EE_HOME[0]+0.0, "y": _EE_HOME[1]-0.6, "z": _EE_HOME[2],
-     "qx": 0.0, "qy": 0.0, "qz":-0.707,  "qw": 0.707, "intent": "navigate"},
+     "qx": 0.0, "qy": 0.0, "qz": 0.0, "qw": 1.0, "intent": "navigate"},
     # navigate diagonal
     {"x": _EE_HOME[0]+0.5, "y": _EE_HOME[1]+0.5, "z": _EE_HOME[2],
-     "qx": 0.0, "qy": 0.0, "qz": 0.383,  "qw": 0.924, "intent": "navigate"},
+     "qx": 0.0, "qy": 0.0, "qz": 0.0, "qw": 1.0, "intent": "navigate"},
     {"x": _EE_HOME[0]+0.5, "y": _EE_HOME[1]-0.5, "z": _EE_HOME[2],
-     "qx": 0.0, "qy": 0.0, "qz":-0.383,  "qw": 0.924, "intent": "navigate"},
+     "qx": 0.0, "qy": 0.0, "qz": 0.0, "qw": 1.0, "intent": "navigate"},
+    {"x": _EE_HOME[0]+0.4, "y": _EE_HOME[1]+0.0, "z": _EE_HOME[2],
+     "qx": 0.0, "qy": 0.0, "qz": 0.0, "qw": 1.0, "intent": "navigate"},
 ]
 
 # ---------------------------------------------------------------------------

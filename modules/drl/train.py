@@ -20,6 +20,7 @@ Salida:
 import argparse
 import os
 import sys
+import time
 
 from stable_baselines3 import DQN, PPO
 from stable_baselines3.common.env_checker import check_env
@@ -161,6 +162,23 @@ def main():
             verbose=1,
         ),
     ])
+
+    # ---- Esperar inicialización del robot --------------------------------
+    # init_goal_publisher.py (lanzado desde drl_launch.launch) publica el
+    # hold-pose durante 5 s tras el primer /data del WBC (que a su vez tarda
+    # wbc_delay=5 s en arrancar).  Si model.learn() empieza antes de que el
+    # publisher termine, ambos publican en /desired_traj simultáneamente y
+    # el robot no responde a las acciones DRL (el publisher gana por frecuencia).
+    #
+    # Espera conservadora:
+    #   wbc_delay (5 s) + init_goal_publisher duration (5 s) + margen (2 s) = 12 s
+    # desde el ARRANQUE de Gazebo. Como el env ya esperó el primer estado
+    # (wait_for_state), el WBC ya arrancó → solo necesitamos esperar el resto
+    # de init_goal_publisher (~5 s) + margen.
+    _INIT_WAIT = 6.0   # s — ajustar si init_goal_publisher se cambia a otro tiempo
+    print(f"[train] Esperando estabilización del robot ({_INIT_WAIT:.0f} s) …")
+    time.sleep(_INIT_WAIT)
+    print("[train] Robot estabilizado — iniciando entrenamiento.")
 
     # ---- Entrenamiento --------------------------------------------------
     print(f"[train] Iniciando entrenamiento …")

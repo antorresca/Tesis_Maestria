@@ -9,10 +9,14 @@
       - Sin EKF ni nodo gazebo_to_ekf (el WBC usa odom crudo; EKF nunca se
         consumía en el loop DRL y desperdiciaba CPU).
       - robot_state_publisher a 50 Hz (vs 1500 Hz): el DRL no usa TF.
+      - Gazebo arranca SIN pausa (paused:=false) — igual que general_launch.
+        Arrancar pausado causa acumulación de errores en integradores del WBC
+        que al despausar generan fuerzas explosivas y auto-colisión.
       - Arquitectura secuencial explícita:
-          1. gazebo_only.launch  → Gazebo + rosbridge
-          2. wait_for_clock      → espera el primer /clock de Gazebo
-          3. robot_spawn.launch  → URDF + spawn + controladores + WBC
+          1. gazebo_only.launch     → Gazebo sin pausa + rosbridge
+          2. wait_for_clock         → espera el primer /clock de Gazebo
+          3. robot_spawn.launch     → URDF + spawn + controladores + WBC
+          4. init_goal_publisher.py → publica hold-pose al WBC durante 5 s
         Esta separación permite también hard-resets del robot sin reiniciar
         Gazebo (delete_model + re-llamar robot_spawn.launch).
 
@@ -49,9 +53,23 @@
     <!-- 3. Robot: URDF + spawn + controladores + WBC                        -->
     <!--    rsp_rate=50: TF a baja frecuencia (DRL no usa RViz).             -->
     <!-- ================================================================== -->
+    <!-- wbc_delay=5: el WBC espera 5 s antes de arrancar, dando tiempo al
+         spawn_model y controladores de publicar joint_states. Sin esto el
+         WBC lee q_k no inicializado y explota numéricamente al unpause. -->
     <include file="$(find mobile_manipulator_unal_description)/launch/robot_spawn.launch">
         <arg name="robot_name" value="$(arg robot_name)"/>
         <arg name="rsp_rate"   value="50"/>
+        <arg name="wbc_delay"  value="5"/>
     </include>
+
+    <!-- ================================================================== -->
+    <!-- 4. Init goal publisher — evita auto-colisión al arranque.           -->
+    <!--    Espera el primer /mobile_manipulator/data y publica hold-pose    -->
+    <!--    a 50 Hz durante 5 s para que el WBC no persiga un goal default.  -->
+    <!-- ================================================================== -->
+    <node pkg="mobile_manipulator_unal_description"
+          type="init_goal_publisher.py"
+          name="init_goal_publisher"
+          output="screen"/>
 
 </launch>

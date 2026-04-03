@@ -32,6 +32,7 @@ Usuario → [PLN] → [Goal Builder] → [DRL] → [robot_interface.py] → WBC 
 
 - Joints base: `mobjoint1/2/3` | Joints brazo: `joint1`–`joint6`
 - Spawn: (0,0,0) mirando +X
+- **EE home medido:** `(0.536, 0.000, 0.747)` con todos los joints en 0 (medido 2026-04-02 via `rostopic echo /mobile_manipulator/data -n 1`)
 
 **Modos WBC** (hardcodeados en `Stack_Tasks.cpp` — pendiente parametrizar en runtime):
 
@@ -51,6 +52,14 @@ Usuario → [PLN] → [Goal Builder] → [DRL] → [robot_interface.py] → WBC 
 | `/mobile_manipulator/commands/velocity` | `Twist` | → base |
 
 **Arm overextension:** Goals dentro de ~1.1 m desde la base → brazo absorbe todo el esfuerzo (pseudoinverso dinámico, menor inercia). **Decisión:** no modificar WBC; se resuelve en Fase 4 con goals siempre fuera del workspace del brazo.
+
+**Comportamiento WBC sin goal (descubierto 2026-04-02):** El WBC inicializa `mob_man_traj` (goal interno) a la posición del EE en el DART model cargado desde URDF. Si el WBC arranca antes de que `q_k` tenga valores reales (antes del primer joint_state callback), el DART model puede tener configuración incorrecta y el WBC genera torques explosivos. Fix: `launch-prefix` con `sleep 5` en `osc_controller.launch` via arg `delay`. Sentinel `-10.0` en joints = "mantener posición actual" (confirmado en `updateTarget()`).
+
+**Reset de episodio DRL (mecanismo confirmado 2026-04-03):** `reset_world` sin pausar la física deja al WBC aplicando torques del goal anterior durante el periodo de settle → auto-colisión. Secuencia correcta en `robot_interface.reset()`:
+```
+pause_physics → reset_world → send_goal(home)×10 → unpause_physics → sleep(settle) → flush_real×10
+```
+La física se congela mientras el WBC recibe el home goal. Al reanudar, el primer torque ya apunta a home.
 
 **Comportamiento IK del WBC:** Al recibir una pose final lejana, el IK puede resolver con configuraciones discontinuas (codo arriba/abajo). Mitigación: DRL envía incrementos Cartesianos pequeños (Δpose) en cada step, reduciendo ambigüedad IK.
 
@@ -158,7 +167,7 @@ r += -0.01   penalización base por step
 r += -0.05   penalización extra si acción == stay
 ```
 
-`GOAL_THR = 0.15 m`. Colisión geométrica: dist a cualquier obstáculo < `COLLISION_RADIUS = 0.25 m`.
+`GOAL_THR = 0.25 m` (amplio para primeros entrenamientos). Colisión geométrica: dist a cualquier obstáculo < `COLLISION_RADIUS = 0.25 m`.
 
 **Sensor de obstáculos — máscara matemática (no LiDAR simulado):**
 - Consultar posición de cada obstáculo via `/gazebo/get_model_state`
@@ -171,6 +180,21 @@ r += -0.05   penalización extra si acción == stay
 **Comparación académica:** PPO con mismo espacio de obs/acción
 
 **Entorno de entrenamiento:** Gazebo headless (`gui:=false`, ~921 Hz), obstáculos estáticos. Fallback: PyBullet si Gazebo inestable en training loop.
+
+**DEFAULT_TRAINING_GOALS (navigate):** Todos usan orientación identidad (qw=1). Para navigate el WBC mueve la base; el brazo mantiene pose home. Goals con orientaciones grandes (180°) fueron eliminados — causan contorsión del brazo durante el episodio. Goals solo en +X, +Y, −Y y diagonales frente al robot (ninguno detrás).
+
+**WORKSPACE_Z:** `(0.35, 1.2)` para entrenamiento navigate. Evita que exploración aleatoria baje el brazo hasta la base. Ajustar a `(0.10, 1.2)` al pasar a pick/place.
+
+**training_world.world — poses actuales (ajustadas 2026-04-02):**
+
+| Modelo | Pose (x, y, z) | Nota |
+|---|---|---|
+| `table` | (1.2, 0.0, 0.05) | Plataforma baja 0.8×0.6×0.10 m — base no colisiona lateralmente |
+| `red_cube` | (1.2, 0.0, 0.125) | Sobre plataforma; EE baja de z=0.747 → z≈0.15 para pick |
+| `tray` | (1.8, -0.8, 0.02) | Destino place |
+| `green_zone` | (-0.8, 0.8, 0.01) | Destino navigate |
+| `obstacle_1` | (0.7, 0.5, 0.25) | Entre robot y tabla |
+| `obstacle_2` | (0.7, -0.5, 0.25) | Entre robot y tabla |
 
 **Baselines de comparación:**
 - Baseline 1: Navegación greedy (vector directo al goal, sin evasión)
@@ -238,14 +262,29 @@ modules/
 | `data/data.md` | Jerarquía de la carpeta data/ |
 | `data/docker/ros1_docker/Dockerfile` | Imagen Docker |
 | `data/docker/ros1_docker/docker-compose.yml` | Config Docker (network: host, GPU) |
-| `data/docker/.../general_launch.launch` | Launch principal (rosbridge + arg `gui`) |
+| `data/docker/.../general_launch.launch` | Launch para debug con GUI |
+| `data/docker/.../drl_launch.launch` | **Entry point DRL** — headless + sin EKF + wbc_delay=5s |
+| `data/docker/.../gazebo_only.launch` | Solo Gazebo (paused=true) + rosbridge |
+| `data/docker/.../robot_spawn.launch` | Spawn + controladores + WBC (con arg `wbc_delay`) |
+| `data/docker/.../osc_controller.launch` | Lanza WBC; arg `delay` agrega sleep antes de arrancar |
+| `data/docker/.../init_goal_publisher.py` | Nodo ROS: espera primer data, publica hold-pose 5s |
+| `data/docker/.../training_world.world` | Escena DRL con plataforma baja y obstáculos |
 | `data/docker/.../Stack_Tasks.cpp` | Modos WBC — **no modificar** |
 | `data/docker/.../config.yaml` | Ganancias OSC — **no modificar** |
+| `modules/robot_interface/robot_interface.py` | Bridge roslibpy; `reset()` hace pause→reset_world→home×10→unpause→flush_real×10 |
+| `modules/drl/config.py` | Hiperparámetros; `_EE_HOME=(0.536,0,0.747)` calibrado; `WORKSPACE_Z=(0.35,1.2)` para navigate |
+| `modules/drl/train.py` | Entrenamiento DQN/PPO; incluye `sleep(6s)` de init wait antes de `model.learn()` |
 
-**Ejecución:**
+**Ejecución DRL:**
 ```bash
-roslaunch ... general_launch.launch          # GUI completa (~500 Hz)
-roslaunch ... general_launch.launch gui:=false  # headless (~921 Hz, obligatorio para DRL)
+# Entrenamiento headless (recomendado):
+roslaunch mobile_manipulator_unal_description drl_launch.launch world:=training_world
+
+# Debug con GUI:
+roslaunch mobile_manipulator_unal_description drl_launch.launch gui:=true world:=training_world
+
+# Desde fuera del Docker:
+python -m modules.drl.train --algo dqn --timesteps 500000
 ```
 
 ---
@@ -257,20 +296,27 @@ roslaunch ... general_launch.launch gui:=false  # headless (~921 Hz, obligatorio
 - [x] **Fase 2: PLN** — XLM-RoBERTa 3 clases atómicas, 94% F1-test, augmentación online ✓
 - [x] **Fase 3: Goal Builder** — implementado, probado y validado contra Gazebo ✓
 - [ ] Fase 4: DRL (DQN principal, PPO comparación, env Gym sobre Gazebo headless)
-  - Módulo creado: `config.py`, `sensor_utils.py`, `mobile_manipulator_env.py`, `train.py`, `evaluate.py`
-  - Primer entrenamiento (500k steps, 16h): agente no convergió — goals a 2m inalcanzables, Gazebo explotó numéricamente
-  - Fixes aplicados: workspace bounds, goals cortos, GOAL_THR=0.25m, obstáculos correctos
-  - **Bloqueado:** auto-colisión del brazo observada con GUI — investigar antes del siguiente entrenamiento
+  - Módulo creado: `config.py`, `sensor_utils.py`, `mobile_manipulator_env.py`, `train.py`, `evaluate.py` ✓
+  - Experimento 01 (500k steps, 16h): no convergió — goals lejanos, Gazebo explotó numéricamente
+  - EE home calibrado: `_EE_HOME = (0.536, 0.000, 0.747)` ✓
+  - training_world.world ajustado: plataforma baja h=0.10m, objetos más cerca ✓
+  - WBC delay fix: `osc_controller.launch` arg `delay`, `drl_launch` pasa `wbc_delay=5` ✓
+  - `init_goal_publisher.py` creado: hold-pose al WBC durante 5s al arranque ✓
+  - `reset()` corregido: pause→reset_world→home×10→unpause→flush_real×10 ✓
+  - Training goals navigate: orientación identidad, sin goals detrás del robot ✓
+  - `WORKSPACE_Z = (0.35, 1.2)`: evita brazo bajo durante exploración navigate ✓
+  - `train.py`: sleep(6s) antes de model.learn() para esperar init_goal_publisher ✓
+  - **Pendiente: smoke test 2000 steps → Entrenamiento 2**
 - [ ] Fase 5: Integración end-to-end
 
-**Fase 4 — DRL (bloqueada — investigar auto-colisión):**
+**Fase 4 — DRL (fixes completos — pendiente validación smoke test):**
 - Tareas al inicio de la próxima sesión:
-  1. Reiniciar Docker/Gazebo limpiamente
-  2. Verificar comportamiento idle con GUI (¿brazo colisiona sin comandos?)
-  3. Medir EE home real: `rostopic echo /mobile_manipulator/data -n 1`
-  4. Confirmar modo WBC: `rostopic echo /mobile_manipulator/joint_states -n 1`
-  5. Actualizar `_EE_HOME` y `DEFAULT_TRAINING_GOALS` en `modules/drl/config.py`
-  6. Smoke test: `python drl/train.py --algo dqn --timesteps 2000`
+  1. Lanzar `drl_launch.launch gui:=true world:=training_world`
+  2. Confirmar log: `[init_goal_publisher] Hold goal: pos=(0.536, 0.000, 0.747)`
+  3. Smoke test: `python -m modules.drl.train --algo dqn --timesteps 2000`
+  4. Verificar en Gazebo: resets suaves sin auto-colisión (brazo vuelve a home con pausa física)
+  5. Verificar log: `[train] Robot estabilizado — iniciando entrenamiento.`
+  6. Si OK → **Entrenamiento 2** completo (`--timesteps 500000`)
 
 **Fase 3 — Goal Builder (en progreso):**
 - `entity_extractor.py` y `pln_module.py` ya soportan 3 clases + XLM-R ✓

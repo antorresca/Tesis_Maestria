@@ -15,6 +15,7 @@ NOT responsible for:
   - Computing rewards or observations for DRL (that lives in the Gym env)
 """
 
+import math
 import time
 import threading
 import roslibpy
@@ -39,6 +40,8 @@ class RobotInterface:
     _TOPIC_GOAL  = '/mobile_manipulator/desired_traj'
     _TOPIC_STATE = '/mobile_manipulator/data'
     _SVC_RESET   = '/gazebo/reset_world'
+    _SVC_PAUSE   = '/gazebo/pause_physics'
+    _SVC_UNPAUSE = '/gazebo/unpause_physics'
 
     def __init__(self, host='localhost', port=9090):
         self._host = host
@@ -62,6 +65,7 @@ class RobotInterface:
             self._client,
             self._TOPIC_GOAL,
             'mobile_manipulator_msgs/Trajectory',
+            queue_size=1,   # solo 1 mensaje pendiente en rosbridge — evita acumulación
         )
         self._goal_pub.advertise()
 
@@ -173,36 +177,68 @@ class RobotInterface:
     # Reset (training episodes)
     # ------------------------------------------------------------------
 
-    def reset(self, settle_time=0.3):
+    def reset(self, settle_time=0.3, ee_home=None):
         """Reset the simulation for a new training episode.
 
-        Steps:
-          1. /gazebo/reset_world  — resets robot to spawn pose (0,0,0),
-                                    no simulation time jump.
-          2. Wait settle_time     — lets Gazebo apply the reset and the
-                                    state topic to reflect the new pose.
-          3. Read post-reset state and send it as the WBC target so the
-             controller holds position instead of chasing the previous
-             episode's last goal.
+        Secuencia:
+          1. pause_physics  — congela la física; el WBC deja de aplicar torques.
+          2. reset_world    — robot vuelve a spawn (joints=0, vel=0) sin física.
+          3. Home goal x10  — se publican 10 goals al EE home mientras la física
+                              sigue pausada. El WBC recibe y encola estos goals.
+                              Cuando se reanude la física, el primer goal que
+                              procesará es el home, no el goal del episodio anterior.
+          4. unpause_physics — reanuda la física; WBC empieza a trackear home
+                              desde el primer ciclo sin ventana de torques erróneos.
+          5. settle_time    — espera a que el WBC converja a home.
+          6. Flush final    — envía 10 mensajes adicionales con la orientación
+                              real leída del estado post-settle, para precisión.
 
         Args:
-            settle_time: seconds to wait after reset_world (default 0.3 s)
+            settle_time: segundos de espera tras unpause para que el WBC
+                         converja a home (default 0.3 s).
+            ee_home    : tuple (x, y, z) — posición home del efector.
+                         Si no se provee, se omite el paso 3 (menos robusto).
 
         Returns:
             Initial state dict (same format as get_state()), or None if
             no state was received within settle_time.
         """
-        svc = roslibpy.Service(
-            self._client,
-            self._SVC_RESET,
-            'std_srvs/Empty',
-        )
-        svc.call(roslibpy.ServiceRequest())
+        def _svc(name):
+            return roslibpy.Service(self._client, name, 'std_srvs/Empty')
 
+        # 1. Pausar física — sin torques durante el reset
+        _svc(self._SVC_PAUSE).call(roslibpy.ServiceRequest())
+
+        # 2. Resetear mundo (robot vuelve a spawn con joints=0)
+        _svc(self._SVC_RESET).call(roslibpy.ServiceRequest())
+
+        # 3. Enviar home goal mientras la física está pausada.
+        #    Con joints=0 en spawn, la orientación del EE es ≈ identidad.
+        if ee_home is not None:
+            hx, hy, hz = ee_home
+            for _ in range(10):
+                self.send_goal(hx, hy, hz, 0.0, 0.0, 0.0, 1.0)
+
+        # 4. Reanudar física — WBC ya tiene el goal home en cola
+        _svc(self._SVC_UNPAUSE).call(roslibpy.ServiceRequest())
+
+        # 5. Settle: WBC converge a home
         time.sleep(settle_time)
 
+        # 6. Flush final con orientación real (corrección de precisión)
         state = self.get_state()
         if state is not None:
-            self.send_goal(*state['ee_pos'])
+            roll, pitch, yaw = state['ee_rpy']
+            cr, sr = math.cos(roll  / 2), math.sin(roll  / 2)
+            cp, sp = math.cos(pitch / 2), math.sin(pitch / 2)
+            cy, sy = math.cos(yaw   / 2), math.sin(yaw   / 2)
+            qx = sr * cp * cy - cr * sp * sy
+            qy = cr * sp * cy + sr * cp * sy
+            qz = cr * cp * sy - sr * sp * cy
+            qw = cr * cp * cy + sr * sp * sy
+
+            for _ in range(10):
+                self.send_goal(*state['ee_pos'], qx, qy, qz, qw)
+                time.sleep(0.02)
 
         return state

@@ -34,6 +34,7 @@ try:
         STEP_SLEEP, RESET_SETTLE_TIME, RESET_EXTRA_SLEEP,
         REWARD_COLLISION, REWARD_SUCCESS, REWARD_STEP, REWARD_STAY,
         DEFAULT_TRAINING_GOALS, WORKSPACE_X, WORKSPACE_Y, WORKSPACE_Z,
+        _EE_HOME,
     )
 except ImportError:
     import sys, os as _os
@@ -48,6 +49,7 @@ except ImportError:
         STEP_SLEEP, RESET_SETTLE_TIME, RESET_EXTRA_SLEEP,
         REWARD_COLLISION, REWARD_SUCCESS, REWARD_STEP, REWARD_STAY,
         DEFAULT_TRAINING_GOALS, WORKSPACE_X, WORKSPACE_Y, WORKSPACE_Z,
+        _EE_HOME,
     )
 
 
@@ -164,7 +166,7 @@ class MobileManipulatorEnv(gym.Env):
         # 2. Resetear Gazebo
         #    settle_time más largo: da tiempo al WBC de recibir el nuevo goal
         #    (home) antes de que el env empiece a leer observaciones.
-        initial_state = self._ri.reset(settle_time=RESET_SETTLE_TIME)
+        initial_state = self._ri.reset(settle_time=RESET_SETTLE_TIME, ee_home=_EE_HOME)
 
         # 3. Esperar estado válido post-reset (con reintentos)
         if initial_state is None:
