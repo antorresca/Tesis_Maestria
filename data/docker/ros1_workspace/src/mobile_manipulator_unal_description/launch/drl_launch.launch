@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<launch>
+
+    <!--
+    drl_launch.launch — Launch optimizado para entrenamiento DRL (Fase 4).
+
+    Diferencias frente a general_launch.launch:
+      - Headless por defecto (gui:=false).
+      - Sin EKF ni nodo gazebo_to_ekf (el WBC usa odom crudo; EKF nunca se
+        consumía en el loop DRL y desperdiciaba CPU).
+      - robot_state_publisher a 50 Hz (vs 1500 Hz): el DRL no usa TF.
+      - Arquitectura secuencial explícita:
+          1. gazebo_only.launch  → Gazebo + rosbridge
+          2. wait_for_clock      → espera el primer /clock de Gazebo
+          3. robot_spawn.launch  → URDF + spawn + controladores + WBC
+        Esta separación permite también hard-resets del robot sin reiniciar
+        Gazebo (delete_model + re-llamar robot_spawn.launch).
+
+    Uso:
+        # Entrenamiento headless (recomendado):
+        roslaunch mobile_manipulator_unal_description drl_launch.launch
+
+        # Con GUI para inspección visual:
+        roslaunch mobile_manipulator_unal_description drl_launch.launch gui:=true
+
+        # Con escena de obstáculos:
+        roslaunch mobile_manipulator_unal_description drl_launch.launch world:=training_world
+    -->
+
+    <arg name="robot_name" default="mobile_manipulator"/>
+    <arg name="gui"        default="false"/>
+    <arg name="world"      default="empty_world"/>
+
+    <!-- ================================================================== -->
+    <!-- 1. Gazebo + rosbridge                                               -->
+    <!-- ================================================================== -->
+    <include file="$(find mobile_manipulator_unal_description)/launch/gazebo_only.launch">
+        <arg name="gui"   value="$(arg gui)"/>
+        <arg name="world" value="$(arg world)"/>
+    </include>
+
+    <!-- ================================================================== -->
+    <!-- 2. Esperar el primer mensaje /clock (Gazebo listo)                  -->
+    <!-- ================================================================== -->
+    <node pkg="rostopic" type="rostopic" name="wait_for_clock"
+          args="echo /clock -n1"/>
+
+    <!-- ================================================================== -->
+    <!-- 3. Robot: URDF + spawn + controladores + WBC                        -->
+    <!--    rsp_rate=50: TF a baja frecuencia (DRL no usa RViz).             -->
+    <!-- ================================================================== -->
+    <include file="$(find mobile_manipulator_unal_description)/launch/robot_spawn.launch">
+        <arg name="robot_name" value="$(arg robot_name)"/>
+        <arg name="rsp_rate"   value="50"/>
+    </include>
+
+</launch>

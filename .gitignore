@@ -6,3 +6,11 @@ data/docker/ros1_workspace/.vscode/
 data/docker/ros1_workspace/.catkin_tools/
 modules/.venv/
 modules/pln/Historical/
+modules/__pycache__/
+modules/**/__pycache__/
+
+# DRL — modelos entrenados
+# Los checkpoints intermedios son redundantes con el modelo final;
+# se excluyen para no saturar el repo en experimentos futuros.
+# Se conservan: best_model.zip, *_model.zip, evaluations.npz y logs TensorBoard.
+modules/models/drl/checkpoints/

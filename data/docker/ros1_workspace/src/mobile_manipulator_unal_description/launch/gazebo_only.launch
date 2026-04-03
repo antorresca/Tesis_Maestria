@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<launch>
+
+    <!-- gui:=false  → gzserver headless (DRL training, recomendado)
+         gui:=true   → gzserver + gzclient (debug / inspección visual)        -->
+    <arg name="gui"   default="false"/>
+
+    <!-- Nombre del mundo a cargar (sin extensión .world).
+         Opciones en mobile_robot_unal_description/worlds/:
+           empty_world    → mundo vacío
+           training_world → escena de entrenamiento DRL (Fase 4) -->
+    <arg name="world" default="empty_world"/>
+
+    <!-- ================================================================== -->
+    <!-- Gazebo (sin robot — el modelo se spawnea separadamente)             -->
+    <!-- ================================================================== -->
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="world_name" value="$(find mobile_robot_unal_description)/worlds/$(arg world).world"/>
+        <arg name="use_sim_time" value="true"/>
+        <arg name="debug"        value="false"/>
+        <arg name="paused"       value="true"/>
+        <arg name="recording"    value="false"/>
+        <arg name="gui"          value="$(arg gui)"/>
+        <arg name="headless"     value="$(eval not arg('gui'))"/>
+    </include>
+
+    <!-- ================================================================== -->
+    <!-- rosbridge — WebSocket para módulos IA externos (puerto 9090)        -->
+    <!-- ================================================================== -->
+    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch">
+        <arg name="port" value="9090"/>
+    </include>
+
+</launch>

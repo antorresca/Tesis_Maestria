@@ -20,7 +20,7 @@ Usuario → [PLN] → [Goal Builder] → [DRL] → [robot_interface.py] → WBC 
 |---|---|---|
 | PLN | XLM-RoBERTa (`xlm-roberta-base`) — fine-tuning ES+EN | **Completo ✓ (94% F1-test, 3 clases atómicas)** |
 | Goal Builder | Mapper semántico JSON→pose + Gazebo ground truth | **Completo ✓** |
-| DRL | DQN principal, PPO como comparación | Por desarrollar (Fase 4) |
+| DRL | DQN principal, PPO como comparación | En desarrollo — módulo creado, primer entrenamiento fallido (ver Fase 4) |
 | Robot + WBC | ROS Melodic + Gazebo + Docker | Existe y funciona |
 | Visión | **Fuera de alcance** — posiciones conocidas via Gazebo ground truth | No se desarrolla |
 
@@ -100,50 +100,98 @@ Pick y place son operacionalmente el mismo tipo (bajar efector con orientación 
 
 **Rol:** Planificador de trayectoria reactivo en espacio Cartesiano. Aprende a llegar al `pose_goal` enviando Δpose incrementales al WBC, evitando obstáculos locales bajo observabilidad parcial (POMDP simplificado).
 
-**No controla:** planificación global, percepción, lógica de pick/place (eso lo determina el Goal Builder).
+**Todos los intents pasan por DRL.** El GoalBuilder entrega el `pose_goal` y el DRL lo alcanza sin importar el intent. La diferencia es el Δ que debe cubrir:
+
+| Intent | Δ que el DRL cubre |
+|---|---|
+| `navigate` | XY + yaw (z de viaje fijo, orientación neutral) |
+| `pick` | XY + yaw + Z hacia abajo + orientación top-down |
+| `place` | igual que pick, a posición destino |
 
 ### Formulación RL
 
-**Observación:**
+**Observación (9 valores, normalizados):**
 ```
 o = [
-  dx_goal, dy_goal, dz_goal,   # vector relativo al objetivo (Cartesiano)
-  dist_goal,                    # distancia euclidiana al objetivo
-  obstacle_front,               # 0/1 (lidar simulado)
-  obstacle_left,                # 0/1
-  obstacle_right                # 0/1
+  dx_goal / MAX_DIST,   # vector relativo X
+  dy_goal / MAX_DIST,   # vector relativo Y
+  dz_goal / MAX_DIST,   # vector relativo Z (clave en pick/place)
+  dist_goal / MAX_DIST, # distancia euclidiana
+  sin(rel_angle),        # ángulo relativo al goal — sin discontinuidad en ±π
+  cos(rel_angle),        # ángulo relativo al goal
+  obstacle_front,        # 0/1 — sensor geométrico (ground truth Gazebo)
+  obstacle_left,         # 0/1
+  obstacle_right         # 0/1
 ]
 ```
 
-**Acciones (discretas):**
+`MAX_DIST = 5.0 m`. `rel_angle = atan2(dy_goal, dx_goal) - yaw_robot`.
+
+**Por qué sin/cos en vez de solo dx/dy:** el DQN no tiene que aprender trigonometría implícita para decidir si girar izquierda o derecha. El ángulo codificado entrega estructura directa al agente.
+
+**Frame stacking (opcional):** apilar N=4 observaciones → 36 inputs. Provee info temporal (velocidad implícita, detección de estancamiento). Implementar con `VecFrameStack` de SB3. Activar si el agente muestra comportamientos oscilatorios sin él.
+
+**Acciones (discretas, 6):**
 ```
-A = { forward, turn_left, turn_right, stay }
+A = { forward, turn_left, turn_right, move_up, move_down, stay }
 ```
-Cada acción genera un Δpose pequeño que se envía al WBC vía `/mobile_manipulator/desired_traj`.
+
+| Acción | Δpose generado |
+|---|---|
+| `forward` | +STEP_XY en dirección del heading |
+| `turn_left` | +TURN_ANGLE en yaw |
+| `turn_right` | -TURN_ANGLE en yaw |
+| `move_up` | +STEP_Z |
+| `move_down` | -STEP_Z |
+| `stay` | sin movimiento |
+
+Valores iniciales: `STEP_XY = 0.05 m`, `STEP_Z = 0.03 m`, `TURN_ANGLE = 10°`.
+
+La **orientación del efector** no es una acción: se interpola con slerp (α=0.1) hacia la orientación del goal en cada step. El WBC integra incrementalmente → sin saltos IK.
 
 **Reward:**
 ```
-+1    si reduce distancia al goal
--1    si aumenta distancia
--10   si colisiona
-+20   si alcanza el objetivo (dist < umbral)
--0.01 penalización por step (eficiencia)
+r  = (dist_prev - dist_curr)   # +si se acerca, -si se aleja
+r += -10.0   si colisiona
+r += +20.0   si dist < GOAL_THR (éxito)
+r += -0.01   penalización base por step
+r += -0.05   penalización extra si acción == stay
 ```
 
-**Algoritmo principal:** DQN (acciones discretas, bajo costo computacional, estable)
-**Comparación académica:** PPO con mismo espacio de observación/acción
+`GOAL_THR = 0.15 m`. Colisión geométrica: dist a cualquier obstáculo < `COLLISION_RADIUS = 0.25 m`.
 
-**Entorno de entrenamiento:** Gazebo headless (`gui:=false`, ~921 Hz) con 2–5 obstáculos (estáticos o con movimiento simple). Fallback: PyBullet si Gazebo presenta inestabilidad en el loop de entrenamiento.
+**Sensor de obstáculos — máscara matemática (no LiDAR simulado):**
+- Consultar posición de cada obstáculo via `/gazebo/get_model_state`
+- Calcular distancia y ángulo relativo al heading del robot
+- Asignar sector: front (|rel|<45°), left (45°–135°), right (–135° a –45°)
+- Binario: True si dist < `DETECTION_RADIUS = 1.5 m` en ese sector
+- Consistente con *omnisciencia de simulación* ya declarada para GoalBuilder
+
+**Algoritmo principal:** DQN (acciones discretas, bajo costo, estable, compatible con frame stacking)
+**Comparación académica:** PPO con mismo espacio de obs/acción
+
+**Entorno de entrenamiento:** Gazebo headless (`gui:=false`, ~921 Hz), obstáculos estáticos. Fallback: PyBullet si Gazebo inestable en training loop.
 
 **Baselines de comparación:**
-- Baseline 1: Navegación greedy (ir directo al objetivo sin evitar obstáculos)
-- Baseline 2 (opcional): A* con conocimiento incompleto
+- Baseline 1: Navegación greedy (vector directo al goal, sin evasión)
+- Baseline 2 (opcional): A* con mapa conocido de obstáculos
 
 **Métricas de evaluación:**
 - Tasa de éxito (% tareas completadas)
 - Tiempo promedio (steps hasta goal)
 - Número de colisiones
 - Eficiencia de trayectoria
+
+**Estructura de archivos DRL:**
+```
+modules/drl/
+  __init__.py
+  sensor_utils.py             ← máscara geométrica de obstáculos
+  mobile_manipulator_env.py   ← gym.Env sobre robot_interface + sensor
+  train.py                    ← entrenamiento DQN y PPO (--algo dqn|ppo)
+  evaluate.py                 ← métricas: éxito, steps, colisiones
+  config.py                   ← hiperparámetros centralizados
+```
 
 ---
 
@@ -209,7 +257,20 @@ roslaunch ... general_launch.launch gui:=false  # headless (~921 Hz, obligatorio
 - [x] **Fase 2: PLN** — XLM-RoBERTa 3 clases atómicas, 94% F1-test, augmentación online ✓
 - [x] **Fase 3: Goal Builder** — implementado, probado y validado contra Gazebo ✓
 - [ ] Fase 4: DRL (DQN principal, PPO comparación, env Gym sobre Gazebo headless)
+  - Módulo creado: `config.py`, `sensor_utils.py`, `mobile_manipulator_env.py`, `train.py`, `evaluate.py`
+  - Primer entrenamiento (500k steps, 16h): agente no convergió — goals a 2m inalcanzables, Gazebo explotó numéricamente
+  - Fixes aplicados: workspace bounds, goals cortos, GOAL_THR=0.25m, obstáculos correctos
+  - **Bloqueado:** auto-colisión del brazo observada con GUI — investigar antes del siguiente entrenamiento
 - [ ] Fase 5: Integración end-to-end
+
+**Fase 4 — DRL (bloqueada — investigar auto-colisión):**
+- Tareas al inicio de la próxima sesión:
+  1. Reiniciar Docker/Gazebo limpiamente
+  2. Verificar comportamiento idle con GUI (¿brazo colisiona sin comandos?)
+  3. Medir EE home real: `rostopic echo /mobile_manipulator/data -n 1`
+  4. Confirmar modo WBC: `rostopic echo /mobile_manipulator/joint_states -n 1`
+  5. Actualizar `_EE_HOME` y `DEFAULT_TRAINING_GOALS` en `modules/drl/config.py`
+  6. Smoke test: `python drl/train.py --algo dqn --timesteps 2000`
 
 **Fase 3 — Goal Builder (en progreso):**
 - `entity_extractor.py` y `pln_module.py` ya soportan 3 clases + XLM-R ✓
@@ -237,10 +298,12 @@ roslaunch ... general_launch.launch gui:=false  # headless (~921 Hz, obligatorio
 
 ---
 
-## Decisiones abiertas
+## Decisiones resueltas (antes abiertas)
 
-- ¿DRL controla solo base (XY+heading) o también Δpose del efector final para pick/place?
-- ¿Entorno de entrenamiento: Gazebo headless directo o PyBullet para velocidad?
-- ¿Setup distribuido LAN: Gazebo en PC2 (GTX 1350), entrenamiento en PC1 (GTX 1650)?
-- ¿Comparación DQN vs PPO requiere publicación o solo es para la tesis?
-- ¿Obstáculos del entorno: estáticos, semi-dinámicos, o ambos?
+| Pregunta | Decisión |
+|---|---|
+| ¿DRL controla solo base o también efector? | **Todos los DOF necesarios.** Navigate: XY+yaw. Pick/place: XY+yaw+Z+slerp orientación. |
+| ¿Entorno de entrenamiento? | **Gazebo headless primero.** Fallback PyBullet solo si hay inestabilidad en training loop. |
+| ¿Setup distribuido LAN? | **Mismo PC primero.** Separar solo si hay contención GPU medible. |
+| ¿Comparación DQN vs PPO? | Solo para tesis (no publicación). Misma env, mismas métricas, tabla comparativa. |
+| ¿Obstáculos estáticos o dinámicos? | **Estáticos** para entrenamiento (training_world.world). Movimiento simple como extensión. |

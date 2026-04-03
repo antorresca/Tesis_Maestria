@@ -1,0 +1,158 @@
+<?xml version="1.0"?>
+<launch>
+
+    <!-- ================================================================== -->
+    <!-- Argumentos                                                           -->
+    <!-- ================================================================== -->
+    <arg name="robot_name"        default="mobile_manipulator"/>
+    <arg name="use_transmissions" default="true"/>
+    <arg name="use_gazebo"        default="true"/>
+    <arg name="mobile_manipulator" default="true"/>
+    <arg name="world_frame"       default="false"/>
+    <arg name="use_gripper"       default="true"/>
+
+    <!-- Frecuencia del robot_state_publisher (TF).
+         1500 Hz: debug con RViz.
+           50 Hz: headless DRL — TF no se usa, no consume CPU innecesariamente. -->
+    <arg name="rsp_rate" default="50"/>
+
+    <!-- Pose inicial del robot al spawnear -->
+    <arg name="x"     default="0.0"/>
+    <arg name="y"     default="0.0"/>
+    <arg name="z"     default="0.0"/>
+    <arg name="roll"  default="0.0"/>
+    <arg name="pitch" default="0.0"/>
+    <arg name="yaw"   default="0.0"/>
+
+    <!-- ================================================================== -->
+    <!-- URDF → parameter server                                             -->
+    <!-- ================================================================== -->
+    <arg name="robot_xacro" value="$(find mobile_robot_unal_description)/urdf/mobile_base.urdf.xacro
+                                    robot_name:=$(arg robot_name)
+                                    load_transmission:=$(arg use_transmissions)
+                                    load_gazebo:=$(arg use_gazebo)
+                                    mobile_manipulator:=$(arg mobile_manipulator)
+                                    world_frame:=$(arg world_frame)
+                                    use_gripper_fingers:=$(arg use_gripper)"/>
+
+    <param
+        name="$(arg robot_name)/robot_description"
+        command="$(find xacro)/xacro $(arg robot_xacro)"
+    />
+
+    <!-- Parser xacro → .urdf (requerido por el WBC para cargar el modelo DART) -->
+    <node
+        pkg="xacro"
+        type="xacro"
+        name="parser"
+        args="$(find mobile_manipulator_unal_description)/urdf/mobile_manipulator.xacro
+              -o $(find mobile_manipulator_unal_description)/urdf/mobile_manipulator.urdf"
+    />
+
+    <!-- ================================================================== -->
+    <!-- robot_state_publisher — TF de joints                                -->
+    <!-- Reducido a rsp_rate Hz en headless: el DRL lee /mobile_manipulator/ -->
+    <!-- data directamente, no necesita el árbol TF.                         -->
+    <!-- ================================================================== -->
+    <node
+        pkg="robot_state_publisher"
+        type="robot_state_publisher"
+        name="rob_st_pub"
+        ns="$(arg robot_name)">
+        <rosparam param="publish_frequency">$(arg rsp_rate)</rosparam>
+    </node>
+
+    <!-- ================================================================== -->
+    <!-- Spawn del modelo en Gazebo                                          -->
+    <!-- ================================================================== -->
+    <node
+        pkg="gazebo_ros"
+        type="spawn_model"
+        name="spawn_$(arg robot_name)"
+        respawn="false"
+        ns="$(arg robot_name)"
+        args="-x $(arg x) -y $(arg y) -z $(arg z)
+              -R $(arg roll) -P $(arg pitch) -Y $(arg yaw)
+              -urdf
+              -param robot_description
+              -model $(arg robot_name)"
+    />
+
+    <!-- ================================================================== -->
+    <!-- Controladores de la base móvil (ruedas omnidireccionales)           -->
+    <!-- ================================================================== -->
+    <rosparam
+        file="$(find mobile_manipulator_unal_description)/config/mobile_vel_controller.yaml"
+        command="load"
+        ns="$(arg robot_name)"
+    />
+
+    <node
+        name="mobile_robot_ctrller"
+        pkg="controller_manager"
+        type="spawner"
+        respawn="false"
+        output="screen"
+        ns="$(arg robot_name)"
+        args="joint_state_controller
+              wheel0_controller
+              wheel1_controller
+              wheel2_controller"
+    />
+
+    <!-- ================================================================== -->
+    <!-- Controladores de esfuerzo del brazo (6 joints + gripper)            -->
+    <!-- ================================================================== -->
+    <rosparam
+        file="$(find mobile_manipulator_unal_description)/config/manipulator_effort_controller.yaml"
+        command="load"
+        ns="$(arg robot_name)"
+    />
+
+    <node
+        name="manipulator_ctrller"
+        pkg="controller_manager"
+        type="spawner"
+        respawn="false"
+        output="screen"
+        ns="$(arg robot_name)"
+        args="waist_controller
+              shoulder_controller
+              elbow_controller
+              upper_forearm_controller
+              lower_forearm_controller
+              wrist_controller
+              gripper_controller"
+    />
+
+    <!-- ================================================================== -->
+    <!-- Odometría — SIN EKF                                                 -->
+    <!-- El WBC usa use_EKF=false en osc_controller.launch; el nodo EKF      -->
+    <!-- consume CPU sin ser consumido por nadie en el loop DRL.             -->
+    <!-- broadcast_transform=true: el nodo odom publica odom→base_footprint  -->
+    <!-- directamente (sin EKF como intermediario).                          -->
+    <!-- ================================================================== -->
+    <node
+        pkg="mobile_robot_unal_description"
+        type="odometry_node"
+        name="odom"
+        ns="mobile_manipulator"
+        output="log">
+        <param name="input_frame"        value="odom"/>
+        <param name="output_frame"       value="base_footprint"/>
+        <param name="robot_name"         value="mobile_manipulator"/>
+        <param name="initial_x"          value="0.0"/>
+        <param name="initial_y"          value="0.0"/>
+        <param name="initial_theta"      value="0.0"/>
+        <param name="loop_rate"          value="50"/>
+        <param name="broadcast_transform" value="true"/>
+    </node>
+
+    <!-- ================================================================== -->
+    <!-- WBC (OSC) + publicador de velocidades globales                      -->
+    <!-- ================================================================== -->
+    <include file="$(find mob_manipulator_controller)/launch/osc_controller.launch">
+        <arg name="robot_name" value="$(arg robot_name)"/>
+    </include>
+
+</launch>

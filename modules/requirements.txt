@@ -4,9 +4,10 @@
 # Comunicación con el robot (WBC en Docker via rosbridge WebSocket)
 roslibpy>=1.3.0
 
-# Deep Reinforcement Learning
-# gymnasium>=0.29.0      # Descomentar cuando se desarrolle Fase 4 (DRL)
-# stable-baselines3>=2.0 # PPO y SAC
+# Deep Reinforcement Learning (Fase 4)
+gymnasium>=0.29.0
+stable-baselines3>=2.3.0   # DQN y PPO; requiere gymnasium
+torch>=2.0.0               # backend de SB3 (también usado por PLN)
 
 # PLN (ver modules/pln/requirements_pln.txt para dependencias completas)
 # transformers>=4.40.0   # mBERT / XLM-RoBERTa
