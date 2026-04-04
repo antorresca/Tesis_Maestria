@@ -1,8 +1,9 @@
-# Dependencias para los módulos de IA (corren fuera del Docker)
+# Dependencias para los módulos de IA
 # Instalar con: pip install -r requirements.txt
+# (dentro del venv: source .venv/bin/activate)
 
-# Comunicación con el robot (WBC en Docker via rosbridge WebSocket)
-roslibpy>=1.3.0
+# Simulación PyBullet (reemplaza Gazebo/ROS/roslibpy a partir de 2026-04-03)
+pybullet>=3.2.6
 
 # Deep Reinforcement Learning (Fase 4)
 gymnasium>=0.29.0

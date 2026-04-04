@@ -1,14 +1,13 @@
 """
 mobile_manipulator_env.py — Entorno Gymnasium para el robot manipulador móvil.
 
-Implementa la interfaz gym.Env sobre robot_interface.RobotInterface + sensor_utils.
+Implementa la interfaz gym.Env sobre PyBulletRobot + pybullet_sensor_utils.
 El DRL elige una acción discreta (Δpose incremental) y recibe:
     - Observación: vector de 9 valores normalizados.
     - Recompensa:  shaping de distancia + colisión + éxito + penalizaciones.
 
 Uso típico (training loop):
-    env = MobileManipulatorEnv(host='localhost', port=9090,
-                               obstacle_models=['unit_box_1'])
+    env = MobileManipulatorEnv(obstacle_models=['obstacle_1', 'table'])
     obs, info = env.reset(options={'pose_goal': pose_goal_dict})
     obs, reward, terminated, truncated, info = env.step(action)
     env.close()
@@ -17,39 +16,38 @@ Compatibilidad: gymnasium >= 0.29  (SB3 >= 2.0)
 """
 
 import math
-import time
 import random
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 
 try:
-    from ..robot_interface.robot_interface import RobotInterface
-    from .sensor_utils import get_obstacle_info
+    from ..robot_interface.pybullet_robot import PyBulletRobot
+    from .pybullet_sensor_utils import get_obstacle_info
     from .config import (
         ACTION_FORWARD, ACTION_TURN_LEFT, ACTION_TURN_RIGHT,
-        ACTION_MOVE_UP, ACTION_MOVE_DOWN, ACTION_STAY,
+        ACTION_BACKWARD, ACTION_STAY,
         STEP_XY, STEP_Z, TURN_ANGLE_RAD, SLERP_ALPHA,
         MAX_DIST, GOAL_THR, COLLISION_RADIUS, DETECTION_RADIUS, MAX_STEPS,
-        STEP_SLEEP, RESET_SETTLE_TIME, RESET_EXTRA_SLEEP,
-        REWARD_COLLISION, REWARD_SUCCESS, REWARD_STEP, REWARD_STAY,
+        REWARD_COLLISION, REWARD_SUCCESS, REWARD_STEP, REWARD_STAY, REWARD_PROXIMITY_SCALE,
         DEFAULT_TRAINING_GOALS, WORKSPACE_X, WORKSPACE_Y, WORKSPACE_Z,
-        _EE_HOME,
+        _EE_HOME, OBSTACLE_SPECS, SENSOR_OBSTACLE_MODELS,
+        GOAL_SAMPLE_X, GOAL_SAMPLE_Y, GOAL_MIN_DIST, GOAL_MAX_TRIES,
     )
 except ImportError:
     import sys, os as _os
     sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
-    from robot_interface.robot_interface import RobotInterface
-    from drl.sensor_utils import get_obstacle_info
+    from robot_interface.pybullet_robot import PyBulletRobot
+    from drl.pybullet_sensor_utils import get_obstacle_info
     from drl.config import (
         ACTION_FORWARD, ACTION_TURN_LEFT, ACTION_TURN_RIGHT,
-        ACTION_MOVE_UP, ACTION_MOVE_DOWN, ACTION_STAY,
+        ACTION_BACKWARD, ACTION_STAY,
         STEP_XY, STEP_Z, TURN_ANGLE_RAD, SLERP_ALPHA,
         MAX_DIST, GOAL_THR, COLLISION_RADIUS, DETECTION_RADIUS, MAX_STEPS,
-        STEP_SLEEP, RESET_SETTLE_TIME, RESET_EXTRA_SLEEP,
-        REWARD_COLLISION, REWARD_SUCCESS, REWARD_STEP, REWARD_STAY,
+        REWARD_COLLISION, REWARD_SUCCESS, REWARD_STEP, REWARD_STAY, REWARD_PROXIMITY_SCALE,
         DEFAULT_TRAINING_GOALS, WORKSPACE_X, WORKSPACE_Y, WORKSPACE_Z,
-        _EE_HOME,
+        _EE_HOME, OBSTACLE_SPECS, SENSOR_OBSTACLE_MODELS,
+        GOAL_SAMPLE_X, GOAL_SAMPLE_Y, GOAL_MIN_DIST, GOAL_MAX_TRIES,
     )
 
 
@@ -93,34 +91,35 @@ def _quat_slerp(q0: np.ndarray, q1: np.ndarray, alpha: float) -> np.ndarray:
 
 class MobileManipulatorEnv(gym.Env):
     """
-    Entorno Gymnasium sobre el robot WBC en Gazebo.
+    Entorno Gymnasium sobre el robot en PyBullet.
 
     Parámetros
     ----------
-    host             : IP del rosbridge (default: localhost).
-    port             : Puerto rosbridge (default: 9090).
-    obstacle_models  : Lista de model_name de Gazebo usados como obstáculos.
-    training_goals   : Lista de pose_goal para reset() aleatorio. Si es None,
-                       usa DEFAULT_TRAINING_GOALS de config.py.
+    gui             : True para abrir ventana gráfica de PyBullet.
+    obstacle_models : Lista de model_name a incluir como obstáculos.
+                      Deben estar definidos en OBSTACLE_SPECS (config.py).
+    training_goals  : Lista de pose_goal para reset() aleatorio. Si es None,
+                      usa DEFAULT_TRAINING_GOALS de config.py.
+    urdf_path       : Ruta al URDF compilado. Si es None, usa el default.
     """
 
     metadata = {"render_modes": []}
 
     def __init__(
         self,
-        host: str = "localhost",
-        port: int = 9090,
+        gui: bool = False,
         obstacle_models: list = None,
         training_goals: list = None,
+        urdf_path: str = None,
     ):
         super().__init__()
 
-        self._ri = RobotInterface(host=host, port=port)
+        self._ri = PyBulletRobot(urdf_path=urdf_path, gui=gui)
         self._obstacle_models  = obstacle_models or []
         self._training_goals   = training_goals or DEFAULT_TRAINING_GOALS
 
-        # Espacios de acción y observación
-        self.action_space = spaces.Discrete(6)
+        # Espacios de acción y observación — Agente 1: 5 acciones XY
+        self.action_space = spaces.Discrete(5)
 
         low  = np.array([-1., -1., -1.,  0., -1., -1., 0., 0., 0.], dtype=np.float32)
         high = np.array([ 1.,  1.,  1.,  1.,  1.,  1., 1., 1., 1.], dtype=np.float32)
@@ -133,9 +132,10 @@ class MobileManipulatorEnv(gym.Env):
         self._prev_dist:    float = 0.0    # distancia al goal en el step anterior
         self._step_count:   int   = 0
 
-        # Conectar al robot
+        # Inicializar PyBullet y cargar obstáculos
         self._ri.connect()
-        self._ri.wait_for_state(timeout=10.0)
+        self._load_obstacles()
+        self._ri.wait_for_state()
 
     # ------------------------------------------------------------------
     # Gymnasium API
@@ -156,34 +156,20 @@ class MobileManipulatorEnv(gym.Env):
         if options and "pose_goal" in options:
             self._pose_goal = options["pose_goal"]
         else:
-            self._pose_goal = random.choice(self._training_goals)
+            self._pose_goal = self._sample_random_goal()
 
         self._goal_quat = np.array([
             self._pose_goal["qx"], self._pose_goal["qy"],
             self._pose_goal["qz"], self._pose_goal["qw"],
         ], dtype=np.float32)
 
-        # 2. Resetear Gazebo
-        #    settle_time más largo: da tiempo al WBC de recibir el nuevo goal
-        #    (home) antes de que el env empiece a leer observaciones.
-        initial_state = self._ri.reset(settle_time=RESET_SETTLE_TIME, ee_home=_EE_HOME)
+        # 2. Resetear simulación PyBullet (síncrono — sin sleeps)
+        initial_state = self._ri.reset(ee_home=_EE_HOME)
 
-        # 3. Esperar estado válido post-reset (con reintentos)
         if initial_state is None:
-            ok = self._ri.wait_for_state(timeout=5.0)
-            if not ok:
-                raise RuntimeError("No se recibió estado del robot tras reset(). "
-                                   "Verificar que Gazebo y rosbridge estén activos.")
-            initial_state = self._ri.get_state()
+            raise RuntimeError("PyBulletRobot.reset() devolvió None inesperadamente.")
 
-        # 3b. Sleep adicional para que el WBC llegue a home y estabilice
-        #     antes de registrar la observación inicial.
-        time.sleep(RESET_EXTRA_SLEEP)
-        stable = self._ri.get_state()
-        if stable is not None:
-            initial_state = stable
-
-        # 4. Inicializar heading a partir del yaw actual
+        # 3. Inicializar heading a partir del yaw actual
         self._cmd_heading = initial_state["ee_rpy"][2]
         self._step_count  = 0
 
@@ -224,14 +210,13 @@ class MobileManipulatorEnv(gym.Env):
         if action == ACTION_FORWARD:
             dx = STEP_XY * math.cos(self._cmd_heading)
             dy = STEP_XY * math.sin(self._cmd_heading)
+        elif action == ACTION_BACKWARD:
+            dx = -STEP_XY * math.cos(self._cmd_heading)
+            dy = -STEP_XY * math.sin(self._cmd_heading)
         elif action == ACTION_TURN_LEFT:
             self._cmd_heading += TURN_ANGLE_RAD
         elif action == ACTION_TURN_RIGHT:
             self._cmd_heading -= TURN_ANGLE_RAD
-        elif action == ACTION_MOVE_UP:
-            dz = STEP_Z
-        elif action == ACTION_MOVE_DOWN:
-            dz = -STEP_Z
         # ACTION_STAY: sin movimiento
 
         # ------------------------------------------------------------------
@@ -248,10 +233,9 @@ class MobileManipulatorEnv(gym.Env):
         cmd_quat    = _quat_slerp(actual_quat, self._goal_quat, SLERP_ALPHA)
 
         # ------------------------------------------------------------------
-        # 4. Enviar goal al WBC y esperar
+        # 4. Enviar goal al robot — devuelve True si colisionó y revirtió
         # ------------------------------------------------------------------
-        self._ri.send_goal(new_x, new_y, new_z, *cmd_quat)
-        time.sleep(STEP_SLEEP)
+        physics_collision = self._ri.send_goal(new_x, new_y, new_z, *cmd_quat)
 
         # ------------------------------------------------------------------
         # 5. Leer estado actualizado
@@ -281,15 +265,20 @@ class MobileManipulatorEnv(gym.Env):
         )
 
         # ------------------------------------------------------------------
-        # 7. Sensor de obstáculos + colisión — UN solo recorrido WebSocket
+        # 7. Sensor de obstáculos — sectores angulares para la observación.
+        #    La colisión real ya fue detectada por send_goal (PyBullet contacts).
+        #    Se usa SENSOR_OBSTACLE_MODELS (solo obs1/obs2): la tabla es el destino
+        #    de pick/place, no un peligro de navegación; incluirla en el sensor
+        #    genera señal de "peligro" al acercarse al goal y provoca oscilación.
         # ------------------------------------------------------------------
         new_yaw = new_state["ee_rpy"][2]
-        front, left, right, collision = get_obstacle_info(
-            self._ri._client,
-            self._obstacle_models,
+        front, left, right, _ = get_obstacle_info(
+            self._ri,
+            SENSOR_OBSTACLE_MODELS,
             new_ee,
             new_yaw,
         )
+        collision = physics_collision
 
         # ------------------------------------------------------------------
         # 8. Calcular recompensa
@@ -298,6 +287,10 @@ class MobileManipulatorEnv(gym.Env):
         reward += REWARD_STEP
         if action == ACTION_STAY:
             reward += REWARD_STAY
+        # Penalización continua de proximidad: escala con la proximidad real.
+        # front ∈ [0,1]; flancos pesan 0.5x (menos críticos que frente).
+        # Cuando front≈1: -0.20/step > shaping de distancia → fuerza desvío.
+        reward -= REWARD_PROXIMITY_SCALE * (front + 0.5 * max(left, right))
 
         terminated = False
         if collision or out_of_ws:
@@ -330,7 +323,62 @@ class MobileManipulatorEnv(gym.Env):
             pass
 
     def render(self):
-        pass   # No se implementa render (Gazebo ya tiene GUI)
+        pass   # Render via GUI de PyBullet si gui=True en el constructor
+
+    # ------------------------------------------------------------------
+    # Internos
+    # ------------------------------------------------------------------
+
+    def _sample_random_goal(self) -> dict:
+        """
+        Muestrea un goal aleatorio dentro de GOAL_SAMPLE_X × GOAL_SAMPLE_Y,
+        rechazando posiciones que caigan dentro de cualquier obstáculo (con margen
+        de COLLISION_RADIUS) o demasiado cerca del spawn (< GOAL_MIN_DIST).
+
+        Si tras GOAL_MAX_TRIES intentos no se encuentra un punto válido, usa
+        random.choice(self._training_goals) como fallback (no debería ocurrir).
+        """
+        home_x, home_y = _EE_HOME[0], _EE_HOME[1]
+        xmin, xmax = GOAL_SAMPLE_X
+        ymin, ymax = GOAL_SAMPLE_Y
+        margin = COLLISION_RADIUS + 0.05   # holgura extra sobre el radio de colisión
+
+        for _ in range(GOAL_MAX_TRIES):
+            gx = float(np.random.uniform(xmin, xmax))
+            gy = float(np.random.uniform(ymin, ymax))
+
+            # Descartar goals trivialmente cerca del spawn
+            if math.sqrt((gx - home_x) ** 2 + (gy - home_y) ** 2) < GOAL_MIN_DIST:
+                continue
+
+            # Descartar goals dentro del bounding box de cualquier obstáculo
+            inside = False
+            for spec in OBSTACLE_SPECS.values():
+                ox, oy = spec["position"][0], spec["position"][1]
+                hx, hy = spec["half_extents"][0], spec["half_extents"][1]
+                if abs(gx - ox) < hx + margin and abs(gy - oy) < hy + margin:
+                    inside = True
+                    break
+            if inside:
+                continue
+
+            return {
+                "x": gx, "y": gy, "z": float(_EE_HOME[2]),
+                "qx": 0.0, "qy": 0.0, "qz": 0.0, "qw": 1.0,
+                "intent": "navigate",
+            }
+
+        # Fallback: nunca debería llegar aquí con GOAL_MAX_TRIES=200
+        return random.choice(self._training_goals)
+
+    def _load_obstacles(self):
+        """Crea los cuerpos de obstáculos en PyBullet según OBSTACLE_SPECS."""
+        for model_name in self._obstacle_models:
+            if model_name not in OBSTACLE_SPECS:
+                print(f"[env] WARN: '{model_name}' no está en OBSTACLE_SPECS — ignorado.")
+                continue
+            spec = OBSTACLE_SPECS[model_name]
+            self._ri.add_obstacle(model_name, **spec)
 
     # ------------------------------------------------------------------
     # Internos
@@ -355,7 +403,7 @@ class MobileManipulatorEnv(gym.Env):
         dz_goal = pg["z"] - ee[2]
         dist    = math.sqrt(dx_goal**2 + dy_goal**2 + dz_goal**2)
 
-        rel_angle = math.atan2(dy_goal, dx_goal) - yaw
+        rel_angle = math.atan2(dy_goal, dx_goal) - self._cmd_heading
 
         obs = np.array([
             dx_goal / MAX_DIST,

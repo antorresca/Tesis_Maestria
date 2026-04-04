@@ -1,12 +1,66 @@
-.vscode/
-data/docker/ros1_workspace/build/
-data/docker/ros1_workspace/devel/
-data/docker/ros1_workspace/logs/
-data/docker/ros1_workspace/.vscode/
-data/docker/ros1_workspace/.catkin_tools/
+# ──────────────────────────────────────────────
+# Python
+# ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+
+# ──────────────────────────────────────────────
+# Entornos virtuales
+# ──────────────────────────────────────────────
 modules/.venv/
-modules/pln/Historical/
-modules/__pycache__/
-modules/**/__pycache__/
+.venv/
+venv/
+env/
+
+# ──────────────────────────────────────────────
+# IDE / editor
+# ──────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ──────────────────────────────────────────────
+# Pesos de modelos ML (binarios grandes)
+# ──────────────────────────────────────────────
+*.safetensors
+*.bin
+*.pt
+*.pth
+
+# Checkpoints intermedios de HuggingFace Trainer
+modules/pln/models/*/checkpoint-*/
+
+# ──────────────────────────────────────────────
+# Modelos DRL — pesos y checkpoints
+# ──────────────────────────────────────────────
+
+# Directorios de salida del entrenamiento DRL
+models/drl/logs/
+models/drl/checkpoints/
+modules/models/drl/logs/
 modules/models/drl/checkpoints/
+
+# ──────────────────────────────────────────────
+# TensorBoard
+# ──────────────────────────────────────────────
+events.out.tfevents.*
+
+# ──────────────────────────────────────────────
+# Archivos del sistema / misceláneos
+# ──────────────────────────────────────────────
+microsoft.gpg
+*.gpg
+*.key
+
+# ──────────────────────────────────────────────
+# Legado / catkin
+# ──────────────────────────────────────────────
+modules/pln/Historical/
 data_legacy/src/catkin/
+modules/models/drl/dqn_model.zip
+models/drl/dqn_model.zip
+.gitignore
+models/drl/ppo_model.zip
+modules/models/drl/best/dqn/best_model.zip

@@ -1,5 +1,5 @@
 """
-train.py — Entrenamiento DQN / PPO sobre MobileManipulatorEnv.
+train.py — Entrenamiento DQN / PPO sobre MobileManipulatorEnv (PyBullet).
 
 Uso:
     # DQN (principal)
@@ -8,9 +8,11 @@ Uso:
     # PPO (comparación académica)
     python -m modules.drl.train --algo ppo --timesteps 500000
 
-    # Con obstáculos y rosbridge remoto
-    python -m modules.drl.train --algo dqn --host 192.168.1.10 \\
-        --obstacle_models unit_box_1 unit_box_2
+    # Con GUI de PyBullet
+    python -m modules.drl.train --algo dqn --gui
+
+    # Smoke test rápido
+    python -m modules.drl.train --algo dqn --timesteps 2000 --check_env
 
 Salida:
     models/drl/<algo>_model.zip         modelo entrenado (SB3)
@@ -20,7 +22,6 @@ Salida:
 import argparse
 import os
 import sys
-import time
 
 from stable_baselines3 import DQN, PPO
 from stable_baselines3.common.env_checker import check_env
@@ -50,19 +51,17 @@ _HPARAMS_MAP = {
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Entrenamiento DRL — robot manipulador móvil")
+    p = argparse.ArgumentParser(description="Entrenamiento DRL — robot manipulador móvil (PyBullet)")
     p.add_argument("--algo",       choices=["dqn", "ppo"], default="dqn",
                    help="Algoritmo a entrenar (default: dqn)")
-    p.add_argument("--host",       default="localhost",
-                   help="IP del rosbridge (default: localhost)")
-    p.add_argument("--port",       type=int, default=9090,
-                   help="Puerto rosbridge (default: 9090)")
+    p.add_argument("--gui",        action="store_true",
+                   help="Abrir ventana gráfica de PyBullet durante el entrenamiento")
     p.add_argument("--timesteps",  type=int, default=TOTAL_TIMESTEPS,
                    help=f"Total de timesteps (default: {TOTAL_TIMESTEPS})")
     p.add_argument("--save_dir",   default="models/drl",
                    help="Directorio de salida para modelos y logs")
     p.add_argument("--obstacle_models", nargs="*", default=None,
-                   help="Model names de Gazebo (default: TRAINING_OBSTACLE_MODELS de config.py)")
+                   help="Model names de obstáculos (default: TRAINING_OBSTACLE_MODELS de config.py)")
     p.add_argument("--check_env",  action="store_true",
                    help="Ejecutar check_env de SB3 antes de entrenar y salir")
     p.add_argument("--eval_freq",  type=int, default=10_000,
@@ -71,7 +70,6 @@ def parse_args():
                    help="Episodios por evaluación (default: 5)")
     p.add_argument("--checkpoint_freq", type=int, default=50_000,
                    help="Cada cuántos steps guardar checkpoint (default: 50000)")
-    # Early stopping por estancamiento
     p.add_argument("--patience",  type=int,   default=5,
                    help="Evaluaciones sin mejora para activar early stop (default: 5)")
     p.add_argument("--min_delta", type=float, default=1.0,
@@ -88,7 +86,7 @@ def main():
                       else TRAINING_OBSTACLE_MODELS
 
     print(f"[train] Algoritmo: {algo_name.upper()}")
-    print(f"[train] Rosbridge: {args.host}:{args.port}")
+    print(f"[train] Simulador: PyBullet {'GUI' if args.gui else 'DIRECT (headless)'}")
     print(f"[train] Timesteps: {args.timesteps:,}")
     print(f"[train] Obstáculos: {obstacle_models or 'ninguno'}")
 
@@ -103,8 +101,7 @@ def main():
 
     # ---- Entorno --------------------------------------------------------
     env = MobileManipulatorEnv(
-        host=args.host,
-        port=args.port,
+        gui=args.gui,
         obstacle_models=obstacle_models,
     )
 
@@ -137,8 +134,7 @@ def main():
 
     # ---- Callbacks ------------------------------------------------------
     eval_env = MobileManipulatorEnv(
-        host=args.host,
-        port=args.port,
+        gui=False,   # eval siempre headless
         obstacle_models=obstacle_models,
     )
 
@@ -163,25 +159,9 @@ def main():
         ),
     ])
 
-    # ---- Esperar inicialización del robot --------------------------------
-    # init_goal_publisher.py (lanzado desde drl_launch.launch) publica el
-    # hold-pose durante 5 s tras el primer /data del WBC (que a su vez tarda
-    # wbc_delay=5 s en arrancar).  Si model.learn() empieza antes de que el
-    # publisher termine, ambos publican en /desired_traj simultáneamente y
-    # el robot no responde a las acciones DRL (el publisher gana por frecuencia).
-    #
-    # Espera conservadora:
-    #   wbc_delay (5 s) + init_goal_publisher duration (5 s) + margen (2 s) = 12 s
-    # desde el ARRANQUE de Gazebo. Como el env ya esperó el primer estado
-    # (wait_for_state), el WBC ya arrancó → solo necesitamos esperar el resto
-    # de init_goal_publisher (~5 s) + margen.
-    _INIT_WAIT = 6.0   # s — ajustar si init_goal_publisher se cambia a otro tiempo
-    print(f"[train] Esperando estabilización del robot ({_INIT_WAIT:.0f} s) …")
-    time.sleep(_INIT_WAIT)
-    print("[train] Robot estabilizado — iniciando entrenamiento.")
-
     # ---- Entrenamiento --------------------------------------------------
-    print(f"[train] Iniciando entrenamiento …")
+    # PyBullet es síncrono — no se necesita sleep de inicialización.
+    print("[train] Iniciando entrenamiento …")
     try:
         model.learn(total_timesteps=args.timesteps, callback=callbacks)
     except KeyboardInterrupt:

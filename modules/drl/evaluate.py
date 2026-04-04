@@ -1,5 +1,5 @@
 """
-evaluate.py — Evaluación de un modelo DRL entrenado.
+evaluate.py — Evaluación de un modelo DRL entrenado (PyBullet).
 
 Métricas reportadas por episodio y en promedio:
     - Tasa de éxito          (% episodios que alcanzan el goal)
@@ -8,18 +8,14 @@ Métricas reportadas por episodio y en promedio:
     - Eficiencia de trayecto (distancia recta / distancia recorrida)
 
 Uso:
-    # Evaluar modelo DQN con 20 episodios
-    python -m modules.drl.evaluate \\
-        --model models/drl/dqn_model.zip \\
-        --algo dqn \\
-        --n_episodes 20
+    # Evaluar mejor modelo DQN con GUI
+    python -m modules.drl.evaluate --model models/drl/best/dqn/best_model --gui
 
-    # Comparar ambos algoritmos
-    python -m modules.drl.evaluate --model models/drl/dqn_model.zip --algo dqn
-    python -m modules.drl.evaluate --model models/drl/ppo_model.zip --algo ppo
+    # Sin GUI, más episodios
+    python -m modules.drl.evaluate --model models/drl/dqn_model --episodes 20
 
-    # Baseline greedy (navegación directa sin DRL)
-    python -m modules.drl.evaluate --baseline greedy --n_episodes 20
+    # Baseline greedy (sin DRL)
+    python -m modules.drl.evaluate --baseline greedy --episodes 20
 """
 
 import argparse
@@ -30,10 +26,12 @@ import numpy as np
 
 try:
     from .mobile_manipulator_env import MobileManipulatorEnv
-    from .config import ACTION_FORWARD, ACTION_TURN_LEFT, ACTION_TURN_RIGHT, GOAL_THR
+    from .config import (ACTION_FORWARD, ACTION_TURN_LEFT, ACTION_TURN_RIGHT,
+                         GOAL_THR, TRAINING_OBSTACLE_MODELS)
 except ImportError:
     from mobile_manipulator_env import MobileManipulatorEnv
-    from config import ACTION_FORWARD, ACTION_TURN_LEFT, ACTION_TURN_RIGHT, GOAL_THR
+    from config import (ACTION_FORWARD, ACTION_TURN_LEFT, ACTION_TURN_RIGHT,
+                        GOAL_THR, TRAINING_OBSTACLE_MODELS)
 
 
 # ---------------------------------------------------------------------------
@@ -69,6 +67,7 @@ def evaluate(
     policy_fn,
     n_episodes: int = 20,
     verbose: bool = True,
+    seed: int = 42,
 ) -> dict:
     """
     Ejecuta n_episodes episodios con policy_fn y recopila métricas.
@@ -83,6 +82,8 @@ def evaluate(
         avg_path_efficiency float (straight / actual, solo ep. exitosos)
         per_episode         list de dicts
     """
+    np.random.seed(seed)
+
     successes   = 0
     collisions  = 0
     steps_list  = []        # steps de episodios exitosos
@@ -185,18 +186,22 @@ def print_summary(label: str, metrics: dict, n_episodes: int):
 # ---------------------------------------------------------------------------
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Evaluación DRL — robot manipulador móvil")
+    p = argparse.ArgumentParser(description="Evaluación DRL — robot manipulador móvil (PyBullet)")
     p.add_argument("--model",     default=None,
                    help="Ruta al modelo .zip (SB3). Requerido si --baseline no se usa.")
     p.add_argument("--algo",      choices=["dqn", "ppo"], default="dqn",
                    help="Algoritmo del modelo cargado (default: dqn)")
     p.add_argument("--baseline",  choices=["greedy"], default=None,
                    help="Evaluar política baseline en lugar del modelo DRL")
-    p.add_argument("--n_episodes", type=int, default=20,
+    p.add_argument("--episodes", "--n_episodes", dest="n_episodes",
+                   type=int, default=20,
                    help="Número de episodios de evaluación (default: 20)")
-    p.add_argument("--host",      default="localhost")
-    p.add_argument("--port",      type=int, default=9090)
-    p.add_argument("--obstacle_models", nargs="*", default=[])
+    p.add_argument("--gui",       action="store_true",
+                   help="Abrir ventana gráfica de PyBullet")
+    p.add_argument("--obstacle_models", nargs="*", default=None,
+                   help="Obstáculos a incluir (default: TRAINING_OBSTACLE_MODELS)")
+    p.add_argument("--seed", type=int, default=42,
+                   help="Semilla para reproducibilidad (default: 42) — usar el mismo valor al comparar DQN vs PPO")
     return p.parse_args()
 
 
@@ -207,10 +212,12 @@ def main():
         print("[evaluate] Error: se debe indicar --model o --baseline.")
         return
 
+    obstacle_models = args.obstacle_models if args.obstacle_models is not None \
+                      else TRAINING_OBSTACLE_MODELS
+
     env = MobileManipulatorEnv(
-        host=args.host,
-        port=args.port,
-        obstacle_models=args.obstacle_models,
+        gui=args.gui,
+        obstacle_models=obstacle_models,
     )
 
     # ---- Política -------------------------------------------------------
@@ -225,8 +232,8 @@ def main():
         policy_fn = lambda obs: int(model.predict(obs, deterministic=True)[0])
 
     # ---- Evaluación -----------------------------------------------------
-    print(f"\n[evaluate] {label} — {args.n_episodes} episodios")
-    metrics = evaluate(env, policy_fn, n_episodes=args.n_episodes, verbose=True)
+    print(f"\n[evaluate] {label} — {args.n_episodes} episodios  (seed={args.seed})")
+    metrics = evaluate(env, policy_fn, n_episodes=args.n_episodes, verbose=True, seed=args.seed)
     print_summary(label, metrics, args.n_episodes)
 
     env.close()
