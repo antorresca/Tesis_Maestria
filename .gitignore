@@ -69,3 +69,5 @@ models/drl/ppo_model.zip
 modules/models/drl/best/dqn/best_model.zip
 models/drl_agent2/dqn_model.zip
 models/drl_agent2/ppo_model.zip
+models/drl/ppo_cont_model.zip
+models/drl/sac_cont_model.zip
