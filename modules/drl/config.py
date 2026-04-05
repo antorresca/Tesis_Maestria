@@ -197,3 +197,36 @@ PPO_HPARAMS = {
 
 # Timesteps totales de entrenamiento (ajustar según tiempo disponible)
 TOTAL_TIMESTEPS = 1_000_000
+
+# ---------------------------------------------------------------------------
+# Hiperparámetros SB3 — SAC (Agente 1 continuo)
+# SAC: off-policy, entropy tuning automático, diseñado para espacios continuos.
+# ---------------------------------------------------------------------------
+SAC_HPARAMS = {
+    "learning_rate":    3e-4,
+    "buffer_size":      200_000,
+    "learning_starts":  2_000,
+    "batch_size":       256,
+    "tau":              0.005,
+    "gamma":            0.99,
+    "train_freq":       1,
+    "gradient_steps":   1,
+    "ent_coef":         "auto",   # ajuste automático de entropía — clave en SAC
+    "policy_kwargs":    {"net_arch": [256, 256]},
+}
+
+# ---------------------------------------------------------------------------
+# Hiperparámetros SB3 — PPO continuo (Agente 1 continuo)
+# Misma arquitectura que PPO discreto para comparación justa.
+# ---------------------------------------------------------------------------
+PPO_CONT_HPARAMS = {
+    "learning_rate":  3e-4,
+    "n_steps":        4096,
+    "batch_size":     128,
+    "n_epochs":       10,
+    "gamma":          0.99,
+    "gae_lambda":     0.95,
+    "clip_range":     0.2,
+    "ent_coef":       0.01,
+    "policy_kwargs":  {"net_arch": [256, 128]},
+}

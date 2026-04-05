@@ -1,18 +1,24 @@
 """
-train.py — Entrenamiento DQN / PPO sobre MobileManipulatorEnv (PyBullet).
+train.py — Entrenamiento DQN / PPO (discreto) y SAC / PPO (continuo) sobre PyBullet.
 
 Uso:
-    # DQN (principal)
+    # DQN discreto (original)
     python -m modules.drl.train --algo dqn
 
-    # PPO (comparación académica)
-    python -m modules.drl.train --algo ppo --timesteps 500000
+    # PPO discreto
+    python -m modules.drl.train --algo ppo --timesteps 1000000
 
-    # Con GUI de PyBullet
-    python -m modules.drl.train --algo dqn --gui
+    # SAC continuo
+    python -m modules.drl.train --algo sac --continuous
 
-    # Smoke test rápido
-    python -m modules.drl.train --algo dqn --timesteps 2000 --check_env
+    # PPO continuo
+    python -m modules.drl.train --algo ppo --continuous
+
+    # Con GUI
+    python -m modules.drl.train --algo sac --continuous --gui
+
+    # Smoke test
+    python -m modules.drl.train --algo sac --continuous --timesteps 2000 --check_env
 
 Salida:
     models/drl/<algo>_model.zip         modelo entrenado (SB3)
@@ -21,9 +27,8 @@ Salida:
 
 import argparse
 import os
-import sys
 
-from stable_baselines3 import DQN, PPO
+from stable_baselines3 import DQN, PPO, SAC
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.callbacks import (
     CheckpointCallback, CallbackList, ProgressBarCallback
@@ -31,29 +36,43 @@ from stable_baselines3.common.callbacks import (
 
 try:
     from .mobile_manipulator_env import MobileManipulatorEnv
-    from .config import DQN_HPARAMS, PPO_HPARAMS, TOTAL_TIMESTEPS, TRAINING_OBSTACLE_MODELS
+    from .continuous_env import ContinuousManipulatorEnv
+    from .config import (
+        DQN_HPARAMS, PPO_HPARAMS, SAC_HPARAMS, PPO_CONT_HPARAMS,
+        TOTAL_TIMESTEPS, TRAINING_OBSTACLE_MODELS,
+    )
     from .callbacks import StagnationEvalCallback
 except ImportError:
     from mobile_manipulator_env import MobileManipulatorEnv
-    from config import DQN_HPARAMS, PPO_HPARAMS, TOTAL_TIMESTEPS, TRAINING_OBSTACLE_MODELS
+    from continuous_env import ContinuousManipulatorEnv
+    from config import (
+        DQN_HPARAMS, PPO_HPARAMS, SAC_HPARAMS, PPO_CONT_HPARAMS,
+        TOTAL_TIMESTEPS, TRAINING_OBSTACLE_MODELS,
+    )
     from callbacks import StagnationEvalCallback
 
 
+# Algoritmos disponibles por modo
 _ALGO_MAP = {
     "dqn": DQN,
     "ppo": PPO,
+    "sac": SAC,
 }
 
+# Hiperparámetros: (discreto, continuo)
 _HPARAMS_MAP = {
-    "dqn": DQN_HPARAMS,
-    "ppo": PPO_HPARAMS,
+    "dqn": (DQN_HPARAMS,      None),           # solo discreto
+    "ppo": (PPO_HPARAMS,      PPO_CONT_HPARAMS),
+    "sac": (None,             SAC_HPARAMS),     # solo continuo
 }
 
 
 def parse_args():
     p = argparse.ArgumentParser(description="Entrenamiento DRL — robot manipulador móvil (PyBullet)")
-    p.add_argument("--algo",       choices=["dqn", "ppo"], default="dqn",
+    p.add_argument("--algo",       choices=["dqn", "ppo", "sac"], default="dqn",
                    help="Algoritmo a entrenar (default: dqn)")
+    p.add_argument("--continuous", action="store_true",
+                   help="Usar espacio de acción continuo Box(2) (requerido para sac)")
     p.add_argument("--gui",        action="store_true",
                    help="Abrir ventana gráfica de PyBullet durante el entrenamiento")
     p.add_argument("--timesteps",  type=int, default=TOTAL_TIMESTEPS,
@@ -79,31 +98,42 @@ def parse_args():
 
 def main():
     args = parse_args()
-    algo_name = args.algo
+    algo_name  = args.algo
+    continuous = args.continuous or (algo_name == "sac")   # SAC implica continuo
 
-    # Si no se pasaron obstáculos por CLI, usar el default de config.py
+    # Validar combinación algo/modo
+    hparams_disc, hparams_cont = _HPARAMS_MAP[algo_name]
+    if continuous and hparams_cont is None:
+        print(f"[train] Error: {algo_name.upper()} solo soporta modo discreto.")
+        return
+    if not continuous and hparams_disc is None:
+        print(f"[train] Error: {algo_name.upper()} requiere --continuous.")
+        return
+
+    hparams = hparams_cont if continuous else hparams_disc
+
     obstacle_models = args.obstacle_models if args.obstacle_models is not None \
                       else TRAINING_OBSTACLE_MODELS
 
-    print(f"[train] Algoritmo: {algo_name.upper()}")
+    modo = "continuo" if continuous else "discreto"
+    print(f"[train] Algoritmo: {algo_name.upper()} ({modo})")
     print(f"[train] Simulador: PyBullet {'GUI' if args.gui else 'DIRECT (headless)'}")
     print(f"[train] Timesteps: {args.timesteps:,}")
     print(f"[train] Obstáculos: {obstacle_models or 'ninguno'}")
 
-    # ---- Rutas de salida ------------------------------------------------
+    # ---- Rutas de salida — sufijo para no mezclar con discreto ----------
+    save_tag = f"{algo_name}_cont" if continuous else algo_name
     os.makedirs(args.save_dir, exist_ok=True)
-    log_dir   = os.path.join(args.save_dir, "logs", algo_name)
-    best_dir  = os.path.join(args.save_dir, "best", algo_name)
-    ckpt_dir  = os.path.join(args.save_dir, "checkpoints", algo_name)
+    log_dir  = os.path.join(args.save_dir, "logs",        save_tag)
+    best_dir = os.path.join(args.save_dir, "best",        save_tag)
+    ckpt_dir = os.path.join(args.save_dir, "checkpoints", save_tag)
     os.makedirs(log_dir,  exist_ok=True)
     os.makedirs(best_dir, exist_ok=True)
     os.makedirs(ckpt_dir, exist_ok=True)
 
     # ---- Entorno --------------------------------------------------------
-    env = MobileManipulatorEnv(
-        gui=args.gui,
-        obstacle_models=obstacle_models,
-    )
+    EnvClass = ContinuousManipulatorEnv if continuous else MobileManipulatorEnv
+    env = EnvClass(gui=args.gui, obstacle_models=obstacle_models)
 
     if args.check_env:
         print("[train] Ejecutando check_env …")
@@ -114,7 +144,6 @@ def main():
 
     # ---- Modelo ---------------------------------------------------------
     AlgoClass = _ALGO_MAP[algo_name]
-    hparams   = _HPARAMS_MAP[algo_name]
 
     try:
         import tensorboard  # noqa: F401
@@ -133,10 +162,7 @@ def main():
     )
 
     # ---- Callbacks ------------------------------------------------------
-    eval_env = MobileManipulatorEnv(
-        gui=False,   # eval siempre headless
-        obstacle_models=obstacle_models,
-    )
+    eval_env = EnvClass(gui=False, obstacle_models=obstacle_models)
 
     callbacks = CallbackList([
         ProgressBarCallback(),
@@ -168,7 +194,7 @@ def main():
         print("\n[train] Entrenamiento interrumpido por el usuario.")
 
     # ---- Guardar modelo final -------------------------------------------
-    final_path = os.path.join(args.save_dir, f"{algo_name}_model")
+    final_path = os.path.join(args.save_dir, f"{save_tag}_model")
     model.save(final_path)
     print(f"[train] Modelo final guardado en {final_path}.zip")
 

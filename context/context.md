@@ -22,8 +22,8 @@ Usuario → [PLN] → [Goal Builder] → [DRL Agente 1 (XY)] → [DRL Agente 2 (
 |---|---|---|
 | PLN | XLM-RoBERTa (`xlm-roberta-base`) — fine-tuning ES+EN | **Completo ✓ (94% F1-test, 3 clases atómicas)** |
 | Goal Builder | Mapper semántico JSON→pose + PyBullet ground truth | **Completo ✓** |
-| DRL Agente 1 | DQN — navegación XY, evasión de obstáculos | En entrenamiento (Entrenamiento 9, 1M steps) |
-| DRL Agente 2 | DQN — posicionamiento Z (brazo) | **Pendiente** — se desarrolla tras convergencia del Agente 1 |
+| DRL Agente 1 | DQN (discrete) ✓ + SAC/PPO continuo (en desarrollo) — navegación XY | DQN 86% éxito; continuo pendiente |
+| DRL Agente 2 | DQN + PPO — posicionamiento Z (brazo) | **Completo ✓** — DQN 85%, PPO 87%, baseline 87% (todos equivalentes) |
 | Robot sim | **PyBullet** — control cinemático + URDF del Robotino3+VXSA300 | Migrado ✓ (Gazebo/Docker eliminados) |
 | Visión | **Fuera de alcance** — posiciones conocidas via PyBullet ground truth | No se desarrolla |
 
@@ -234,13 +234,20 @@ modules/
     urdf/
       mobile_manipulator_pybullet.urdf  ← URDF limpio (sin transmissions/gazebo)
   drl/
-    config.py                     ← hiperparámetros centralizados
+    config.py                     ← hiperparámetros centralizados (Agente 1 + constantes compartidas)
     mobile_manipulator_env.py     ← Gym.Env Agente 1 (XY, Discrete(5))
     pybullet_sensor_utils.py      ← proximidad continua por sectores angulares
     train.py                      ← entrenamiento DQN/PPO con --gui, --patience
     evaluate.py                   ← métricas: éxito, steps, colisiones, eficiencia
     demo.py                       ← visualización interactiva con delay configurable
     callbacks.py                  ← StagnationEvalCallback (early stop por patience)
+  drl_agent2/
+    __init__.py
+    config.py                     ← hiperparámetros específicos del brazo (ARM_*)
+    arm_env.py                    ← Gym.Env Agente 2 (Z, Discrete(3), obs=3)
+    train.py                      ← entrenamiento DQN/PPO Agente 2
+    evaluate.py                   ← métricas: éxito, error Z, eficiencia
+    demo.py                       ← demo visual con z_goal configurable
   pln/
     ...                           ← XLM-RoBERTa fine-tuneado (completo ✓)
   goal_builder/
@@ -271,6 +278,8 @@ modules/
 | `modules/drl/demo.py` | Visualización paso a paso con delay |
 | `models/drl/best/dqn/best_model` | Modelo DQN Agente 1 — Entrenamiento 13, goals aleatorios, **86% éxito** |
 | `models/drl/best/ppo/best_model` | Modelo PPO Agente 1 — PPO-2 en entrenamiento (PPO-1: 62% éxito) |
+| `modules/drl_agent2/arm_env.py` | Gym.Env Agente 2 — Discrete(3), obs=[dz_norm, z_norm, dist_z_norm] |
+| `modules/drl_agent2/config.py` | Hiperparámetros Agente 2: `GOAL_Z_THR=0.05m`, `ARM_MAX_STEPS=150`, `ARM_TOTAL_TIMESTEPS=300k` |
 
 ---
 
@@ -288,7 +297,10 @@ modules/
   - [x] Muestreo aleatorio de goals + sensor sin tabla ✓
   - [x] **DQN Agente 1:** 86% éxito, 14% col, 0% timeout ✓
   - [x] **Comparación DQN vs PPO completada** ✓ — DQN supera PPO (86% vs 65%); ver bitácora
-  - [ ] **Agente 2 (Z) — siguiente paso**
+  - [x] **Agente 2 (Z) — completo** ✓ — DQN 85% / PPO 87% / baseline proporcional 87% (todos equivalentes; se usará baseline en producción)
+  - [x] **Agente 1 continuo — módulo creado** ✓ — `ContinuousManipulatorEnv` Box(2), SAC + PPO continuo
+  - [ ] **Agente 1 continuo — entrenamiento SAC** (siguiente paso)
+  - [ ] **Agente 1 continuo — entrenamiento PPO + comparación con DQN discreto**
 - [ ] Fase 5: Integración end-to-end
 
 ---
@@ -305,7 +317,7 @@ modules/
 
 ## Trabajo futuro
 
-- **Agente 2 (Z):** `ArmEnv` minimalista — obs=[dz, dist_z], acciones=3, sin obstáculos
+- ~~**Agente 2 (Z):** `ArmEnv` minimalista — obs=[dz, dist_z], acciones=3, sin obstáculos~~ **Implementado** ✓ en `modules/drl_agent2/`
 - **World Describer Agent:** consulta PyBullet ground truth y genera descripciones en lenguaje natural
 - **Módulo de visión:** Reemplazar ground truth por detección visual real (YOLO + estimación de pose)
 - **HRL sobre Goal Builder:** Planificador jerárquico para tareas compuestas

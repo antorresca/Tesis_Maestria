@@ -26,9 +26,11 @@ import numpy as np
 
 try:
     from .mobile_manipulator_env import MobileManipulatorEnv
+    from .continuous_env import ContinuousManipulatorEnv
     from .config import DEFAULT_TRAINING_GOALS, TRAINING_OBSTACLE_MODELS, _EE_HOME, GOAL_THR
 except ImportError:
     from mobile_manipulator_env import MobileManipulatorEnv
+    from continuous_env import ContinuousManipulatorEnv
     from config import DEFAULT_TRAINING_GOALS, TRAINING_OBSTACLE_MODELS, _EE_HOME, GOAL_THR
 
 
@@ -88,10 +90,12 @@ def run_episode(env, policy_fn, pose_goal: dict, delay: float, verbose: bool = T
 
 def parse_args():
     p = argparse.ArgumentParser(description="Demo DRL — visualización interactiva (PyBullet GUI)")
-    p.add_argument("--model",   required=True,
+    p.add_argument("--model",      required=True,
                    help="Ruta al modelo .zip (SB3), sin extensión")
-    p.add_argument("--algo",    choices=["dqn", "ppo"], default="dqn")
-    p.add_argument("--delay",   type=float, default=0.15,
+    p.add_argument("--algo",       choices=["dqn", "ppo", "sac"], default="dqn")
+    p.add_argument("--continuous", action="store_true",
+                   help="Usar ContinuousManipulatorEnv (auto si --algo sac)")
+    p.add_argument("--delay",      type=float, default=0.15,
                    help="Segundos de pausa entre steps (default: 0.15)")
 
     # Goal manual
@@ -112,20 +116,23 @@ def parse_args():
 
 def main():
     args = parse_args()
+    continuous = args.continuous or (args.algo == "sac")
 
     obstacle_models = args.obstacle_models if args.obstacle_models is not None \
                       else TRAINING_OBSTACLE_MODELS
 
-    print(f"[demo] Cargando modelo: {args.model}")
+    modo = "continuo" if continuous else "discreto"
+    print(f"[demo] Cargando modelo: {args.model}  ({args.algo.upper()} {modo})")
     print(f"[demo] Delay entre steps: {args.delay}s")
     print(f"[demo] Obstáculos: {obstacle_models or 'ninguno'}")
 
-    env = MobileManipulatorEnv(gui=True, obstacle_models=obstacle_models)
+    EnvClass = ContinuousManipulatorEnv if continuous else MobileManipulatorEnv
+    env = EnvClass(gui=True, obstacle_models=obstacle_models)
 
-    from stable_baselines3 import DQN, PPO
-    _cls = {"dqn": DQN, "ppo": PPO}[args.algo]
+    from stable_baselines3 import DQN, PPO, SAC
+    _cls = {"dqn": DQN, "ppo": PPO, "sac": SAC}[args.algo]
     model = _cls.load(args.model, env=env)
-    policy_fn = lambda obs: int(model.predict(obs, deterministic=True)[0])
+    policy_fn = lambda obs: model.predict(obs, deterministic=True)[0]
 
     # Construir lista de goals
     if args.all_goals:

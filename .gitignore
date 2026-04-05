@@ -41,6 +41,10 @@ models/drl/logs/
 models/drl/checkpoints/
 modules/models/drl/logs/
 modules/models/drl/checkpoints/
+models/drl_agent2/logs/
+models/drl_agent2/checkpoints/
+modules/models/drl_agent2/logs/
+modules/models/drl_agent2/checkpoints/
 
 # ──────────────────────────────────────────────
 # TensorBoard
@@ -61,6 +65,7 @@ modules/pln/Historical/
 data_legacy/src/catkin/
 modules/models/drl/dqn_model.zip
 models/drl/dqn_model.zip
-.gitignore
 models/drl/ppo_model.zip
 modules/models/drl/best/dqn/best_model.zip
+models/drl_agent2/dqn_model.zip
+models/drl_agent2/ppo_model.zip
