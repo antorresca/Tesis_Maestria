@@ -300,8 +300,10 @@ modules/
   - [x] **Comparación DQN vs PPO completada** ✓ — DQN supera PPO (86% vs 65%); ver bitácora
   - [x] **Agente 2 (Z) — completo** ✓ — DQN 85% / PPO 87% / baseline proporcional 87% (todos equivalentes; se usará baseline en producción)
   - [x] **Agente 1 continuo — completo** ✓ — SAC 66% / PPO-cont 76% / DQN discreto sigue siendo el mejor (86%)
-  - [ ] **Fase 5: integración end-to-end**
-- [ ] Fase 5: Integración end-to-end
+- [ ] **Fase 5: Validación end-to-end**
+  - [ ] Integración PLN → Goal Builder → Agente 1 → Agente 2 en pipeline completo
+  - [ ] Escenarios de evaluación con obstáculos dinámicos (posición variable durante ejecución)
+  - [ ] Análisis estadístico: tasa de éxito, colisiones, eficiencia de trayectoria, adaptabilidad
 
 ---
 
@@ -310,9 +312,10 @@ modules/
 | Limitación | Módulo | Alcance |
 |---|---|---|
 | Unicidad semántica de objetos | Goal Builder | La escena asume un objeto por tipo semántico |
-| Vocabulario cerrado | entity_extractor | Solo entidades del dominio definidas |
-| Posiciones estáticas | Goal Builder | Las posiciones se consultan en el momento de `build()` |
-| Control cinemático (no dinámico) | PyBulletRobot | El robot teleporta — no simula inercia ni fricción real |
+| Vocabulario cerrado (intenciones) | PLN — clasificador | Solo 3 intenciones: `navigate`, `pick`, `place`. Instrucciones fuera de estas clases son forzadas a una de ellas. |
+| Vocabulario cerrado (entidades) | entity_extractor | Solo entidades del dominio definidas; objetos no registrados no son detectados. |
+| Posiciones de objetos por ground truth | Goal Builder | Las posiciones se consultan vía PyBullet ground truth — supuesto operacional declarado. Visión real es trabajo futuro. |
+| Control cinemático (no dinámico) | PyBulletRobot | El robot teleporta — no simula inercia ni fricción real. Primera etapa para validar arquitectura; control dinámico es extensión hacia hardware real. |
 | Goals fuera del workspace | Agente 1 | Goals con x>2.5 o fuera de WORKSPACE son imposibles |
 
 ## Trabajo futuro
@@ -331,6 +334,6 @@ modules/
 | ¿DRL controla solo base o también efector? | **Dos agentes:** Agente 1 (XY, base), Agente 2 (Z, brazo). Navigate solo usa Agente 1. |
 | ¿Entorno de entrenamiento? | **PyBullet** — Gazebo/Docker eliminados. ~251 it/s headless. |
 | ¿Comparación DQN vs PPO? | Solo para tesis. Misma env, mismas métricas, tabla comparativa. |
-| ¿Obstáculos estáticos o dinámicos? | **Estáticos** para entrenamiento. |
+| ¿Obstáculos estáticos o dinámicos? | **Estáticos** para entrenamiento. **Dinámicos** (posición variable durante la ejecución) para evaluación en Fase 5 — evalúa generalización ante condiciones no vistas en entrenamiento. |
 | ¿Colisión geométrica o física? | **Física** — `performCollisionDetection` + `getContactPoints` contra `obstacle_body_ids` |
 | ¿Obs de obstáculos binaria o continua? | **Continua** [0,1] — permite graduar respuesta antes de la colisión |
